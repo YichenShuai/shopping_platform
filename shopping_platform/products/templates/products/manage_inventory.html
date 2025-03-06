@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping - Manage inventory</title>
+</head>
+<body>
+    <h1>Manage inventory</h1>
+    {% if messages %}
+        {% for message in messages %}
+            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    <div>
+        <a href="{% url 'create_product' %}">Add new product</a>
+    </div>
+    <div>
+        {% if products %}
+            <ul>
+                {% for product in products %}
+                    <li>
+                        {{ product.name }} - price: ${{ product.price }} - stock: {{ product.stock }}
+                        - status: {{ product.is_active|yesno:"listed,removed" }}
+                        <a href="{% url 'toggle_product' product.id %}">
+                            {% if product.is_active %}removed{% else %}listed{% endif %}
+                        </a>
+                        <a href="{% url 'update_stock' product.id %}">update the stock</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>You haven't published any products yet.</p>
+        {% endif %}
+    </div>
+    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
+</body>
+</html>

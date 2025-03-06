@@ -14,11 +14,16 @@
     {% if reviews %}
         <ul>
             {% for review in reviews %}
-                <li>{{ review.buyer.username }}: {{ review.comment }} (评分: {{ review.rating }})</li>
+                <li>{{ review.buyer.username }}: {{ review.comment }} (Review: {{ review.rating }})</li>
             {% endfor %}
         </ul>
     {% else %}
         <p>no more reviews</p>
+    {% endif %}
+    {% if user.is_authenticated and user.is_buyer %}
+        <a href="{% url 'add_review' product.id %}">Add review</a>
+    {% else %}
+        <p><a href="{% url 'login' %}?next={% url 'add_review' product.id %}">Login to add a comment</a></p>
     {% endif %}
     {% if user.is_authenticated %}
         <a href="{% url 'add_to_cart' product.id %}">Add to cart</a>

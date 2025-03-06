@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping - Checkout</title>
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Checkout</h1>
+    {% if messages %}
+        {% for message in messages %}
+            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    <div>
+        <h2>Shopping cart contents</h2>
+        {% if cart_items %}
+            <form method="post">
+                {% csrf_token %}
+                <div>
+                    <label>Address Mode:</label>
+                    <input type="radio" name="address_mode" value="single" checked onchange="toggleAddresses()"> Single Address
+                    <input type="radio" name="address_mode" value="multiple" onchange="toggleAddresses()"> Multiple Address
+                </div>
+                <div id="single-address" class="single-address">
+                    <label>shipping address (applicable to all orders):</label>
+                    <textarea name="delivery_address" required></textarea><br>
+                </div>
+                <div id="multiple-addresses" class="multiple-addresses hidden">
+                    {% for item in cart_items %}
+                        <h3>product: {{ item.product.name }} (seller: {{ item.product.seller.username }})</h3>
+                        <ul>
+                            <li>quantity: {{ item.quantity }} - total: ${{ item.product.price | floatformat:2 }}</li>
+                        </ul>
+                        <label>shipping address ({{ item.product.name }}):</label>
+                        <textarea name="delivery_address_{{ item.id }}" required></textarea><br>
+                    {% endfor %}
+                </div>
+                <p>total: ${{ total | floatformat:2 }}</p>
+                <p>Your balance: ${{ user.balance | floatformat:2 }}</p>
+                {% if user.balance < total %}
+                    <p style="color: red;">Insufficient balance, please recharge!</p>
+                {% endif %}
+                <button type="submit">Confirm payment!</button>
+            </form>
+        {% else %}
+            <p>Empty cart</p>
+        {% endif %}
+    </div>
+    <p><a href="{% url 'view_cart' %}">Return to cart</a></p>
+
+    <script>
+        function toggleAddresses() {
+            const mode = document.querySelector('input[name="address_mode"]:checked').value;
+            const singleAddress = document.getElementById('single-address');
+            const multipleAddresses = document.getElementById('multiple-addresses');
+            if (mode === 'single') {
+                singleAddress.classList.remove('hidden');
+                multipleAddresses.classList.add('hidden');
+            } else {
+                singleAddress.classList.add('hidden');
+                multipleAddresses.classList.remove('hidden');
+            }
+        }
+        // Initialized when the page loads
+        window.onload = toggleAddresses;
+    </script>
+</body>
+</html>
