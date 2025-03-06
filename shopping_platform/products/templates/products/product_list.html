@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping - Product_list</title>
+</head>
+<body>
+    <h1>Shopping</h1>
+    <div>
+        <form method="get" action="{% url 'product_list' %}">
+            <input type="text" name="q" value="{{ query }}" placeholder="Searching...">
+            <select name="category">
+                <option value="">All products</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="submit">Searching</button>
+        </form>
+    </div>
+    <div>
+        {% if user.is_authenticated %}
+            <p>
+                Welcome, {{ user.username }}!
+                <a href="{% url 'view_cart' %}">cart</a> |
+                {% if user.is_buyer %}
+                    <a href="{% url 'order_history' %}">order history</a> |
+                {% endif %}
+                {% if user.is_seller %}
+                    <a href="{% url 'manage_inventory' %}">manage inventory</a> |
+                    <a href="{% url 'seller_orders' %}">seller order history</a> |
+                {% endif %}
+                <a href="{% url 'logout' %}">logout</a>
+            </p>
+            {% if user.is_seller %}
+                <p><a href="{% url 'create_product' %}">Add new product</a></p>
+            {% endif %}
+        {% else %}
+            <p>
+                <a href="{% url 'login' %}">login</a> |
+                <a href="{% url 'register' %}">register</a> |
+                <a href="{% url 'login' %}?next={% url 'view_cart' %}">cart</a>
+            </p>
+        {% endif %}
+    </div>
+    <div>
+        <h2>product list</h2>
+        {% if products %}
+            <ul>
+                {% for product in products %}
+                    <li>
+                        {{ product.name }} - price: ${{ product.price }}
+                        {% if product.stock > 0 %}
+                            stock: {{ product.stock }}
+                        {% else %}
+                            out of stock
+                        {% endif %}
+                        <a href="{% url 'product_detail' product.id %}">Check the details</a>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'add_to_cart' product.id %}">Add to cart</a>
+                        {% else %}
+                            <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}">Add to cart (Please login first)</a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>no product</p>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -12,6 +12,7 @@ class Product(models.Model):
     rating = models.FloatField(default=0.0)  # average rating
     sales = models.IntegerField(default=0)  # sales volume (used to count hot-selling products)
     created_at = models.DateTimeField(auto_now_add=True) # product creation time
+    is_active = models.BooleanField(default=True)  # Whether the product is listed by the seller
 
     def __str__(self):
         return self.name

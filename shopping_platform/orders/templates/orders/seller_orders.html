@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping - Seller order</title>
+</head>
+<body>
+    <h1>Seller order</h1>
+    {% if messages %}
+        {% for message in messages %}
+            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    {% if orders %}
+        <ul>
+            {% for order in orders %}
+                <li>
+                    order #{{ order.id }} - buyer: {{ order.buyer.username }}
+                    - total: ${{ order.total_amount | floatformat:2 }}
+                    - status: {{ order.status }}
+                    - payment status: {{ order.payment_status }}
+                    - order time: {{ order.created_at }}
+                    <ul>
+                        {% for item in order.items.all %}
+                            {% if item.product.seller == user %}
+                                <li>{{ item.product.name }} - quantity: {{ item.quantity }} - price: ${{ item.price | floatformat:2 }}</li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                    {% if order.status == 'Pending' %}
+                        <a href="{% url 'ship_order' order.id %}">Mark as shipped</a>
+                    {% endif %}
+                    {% if order.return_requested and order.status == 'Returned' and not order.refunded_at %}
+                        <a href="{% url 'process_return' order.id %}">Processing Refunds</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No orders yet</p>
+    {% endif %}
+    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
+</body>
+</html>

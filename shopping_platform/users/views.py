@@ -37,7 +37,7 @@ def register(request):
         # Automatically login after registration is completed
         login(request, user)
         messages.success(request, 'Successful registration！')
-        return redirect('home')  # Turn to home page (need to be defined)
+        return redirect('product_list')  # Turn to home page
     return render(request, 'users/register.html')
 
 def login_view(request):
@@ -49,7 +49,7 @@ def login_view(request):
         if user is not None:
             login(request, user)
             messages.success(request, 'Login successful！')
-            return redirect('home')  # Turn to home page
+            return redirect('product_list')  # Turn to home page
         else:
             messages.error(request, 'Wrong username or password')
     return render(request, 'users/login.html')
