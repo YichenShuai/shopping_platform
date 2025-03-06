@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping - Publish_product</title>
+</head>
+<body>
+    <h1>Publish product</h1>
+    {% if messages %}
+        {% for message in messages %}
+            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <label>product name:</label>
+        <input type="text" name="name" required>
+        <label>description:</label>
+        <textarea name="description" required></textarea><br>
+        <label>price:</label>
+        <input type="number" step="0.01" name="price" required><br>
+        <label>stock:</label>
+        <input type="number" name="stock" required><br>
+        <label>category:</label>
+        <select name="category" required>
+            {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+        </select><br>
+        <button type="submit">Create</button>
+    </form>
+    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
+</body>
+</html>

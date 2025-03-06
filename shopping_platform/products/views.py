@@ -5,20 +5,20 @@ from .models import Product, Review
 from categories.models import Category
 
 def product_list(request):
-    # 获取搜索和分类筛选参数
+    # Searching and filtering
     query = request.GET.get('q')
     category_id = request.GET.get('category')
     products = Product.objects.all()
 
-    # 搜索功能
+    # Searching
     if query:
         products = products.filter(name__icontains=query)
 
-    # 按类别筛选
+    # Filter by category
     if category_id:
         products = products.filter(category_id=category_id)
 
-    categories = Category.objects.all()  # 获取所有类别
+    categories = Category.objects.all()  # obtain all the categories
     context = {
         'products': products,
         'categories': categories,
@@ -38,9 +38,9 @@ def product_detail(request, product_id):
 
 @login_required
 def create_product(request):
-    # 限制只有卖家可以发布产品
+    # only buyer can publish products
     if not request.user.is_seller:
-        messages.error(request, '只有卖家可以发布产品！')
+        messages.error(request, 'only buyer can publish products！')
         return redirect('product_list')
 
     if request.method == 'POST':
@@ -50,7 +50,7 @@ def create_product(request):
         stock = request.POST['stock']
         category_id = request.POST['category']
 
-        # 创建产品
+        # create new product
         product = Product(
             name=name,
             description=description,
@@ -60,7 +60,7 @@ def create_product(request):
             category_id=category_id
         )
         product.save()
-        messages.success(request, '产品发布成功！')
+        messages.success(request, 'new product added！')
         return redirect('product_list')
 
     categories = Category.objects.all()
