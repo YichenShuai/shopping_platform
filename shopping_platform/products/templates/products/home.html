@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping - Homepage</title>
+</head>
+<body>
+    <h1>Shopping</h1>
+    <div>
+        <form method="get" action="{% url 'home' %}">
+            <input type="text" name="q" value="{{ query }}" placeholder="Searching...">
+            <button type="submit">Searching</button>
+        </form>
+    </div>
+    <div>
+        {% if user.is_authenticated %}
+            <p>Welcome, {{ user.username }}! <a href="{% url 'logout' %}">logout</a></p>
+        {% else %}
+            <p><a href="{% url 'login' %}">login</a> | <a href="{% url 'register' %}">register</a></p>
+        {% endif %}
+    </div>
+    <div>
+        <h2>Products list</h2>
+        {% if products %}
+            <ul>
+                {% for product in products %}
+                    <li>
+                        {{ product.name }} - price: ${{ product.price }}
+                        {% if product.stock > 0 %}
+                            stock: {{ product.stock }}
+                        {% else %}
+                            out of stock
+                        {% endif %}
+                        <a href="#">check for details</a>  <!-- link to products details (for future) -->
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'add_to_cart' product.id %}">add to cart</a>  <!-- (for future) -->
+                        {% else %}
+                            <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}">add to cart(please login first)</a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>no product</p>
+        {% endif %}
+    </div>
+</body>
+</html>

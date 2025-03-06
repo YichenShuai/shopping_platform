@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>login</title>
+</head>
+<body>
+    <h2>login</h2>
+    {% if messages %}
+        {% for message in messages %}
+            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <label>username:</label>
+        <input type="text" name="username" required><br>
+        <label>password:</label>
+        <input type="password" name="password" required><br>
+        <button type="submit">login</button>
+    </form>
+    <a href="{% url 'register' %}">Don't have an account? Register</a>
+</body>
+</html>
