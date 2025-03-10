@@ -31,6 +31,9 @@
                     <a href="{% url 'manage_inventory' %}">manage inventory</a> |
                     <a href="{% url 'seller_orders' %}">seller order history</a> |
                 {% endif %}
+                {% if user.is_admin %}
+                    <a href="{% url 'statistics' %}">Statistics</a> |
+                {% endif %}
                 <a href="{% url 'logout' %}">logout</a>
             </p>
             {% if user.is_seller %}

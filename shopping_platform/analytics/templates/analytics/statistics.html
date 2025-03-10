@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shopping - Statistics</title>
+</head>
+<body>
+    <h1>Sales Statistics</h1>
+    {% if messages %}
+        {% for message in messages %}
+            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    <div>
+        <h2>total sales</h2>
+        <p>${{ total_sales | floatformat:2 }}</p>
+    </div>
+    <div>
+        <h2>total orders</h2>
+        <p>{{ order_count }}</p>
+    </div>
+    <div>
+        <h2>Popular Products (Top 5)</h2>
+        {% if top_products %}
+            <ul>
+                {% for product in top_products %}
+                    <li>{{ product.name }} - Sales quantity: {{ product.total_sold|default:"0" }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No data yet.</p>
+        {% endif %}
+    </div>
+    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
+</body>
+</html>
