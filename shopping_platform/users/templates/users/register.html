@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>registration</title>
+    <title>ShopDing - Register</title>
+    <style>
+        .form-group { margin-bottom: 15px; }
+        .form-control { width: 100%; padding: 8px; }
+    </style>
 </head>
 <body>
-    <h2>registration</h2>
+    <h1>Register</h1>
     {% if messages %}
         {% for message in messages %}
             <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
@@ -12,19 +16,9 @@
     {% endif %}
     <form method="post">
         {% csrf_token %}
-        <label>username:</label>
-        <input type="text" name="username" required><br>
-        <label>email:</label>
-        <input type="email" name="email" required><br>
-        <label>password:</label>
-        <input type="password" name="password" required><br>
-        <label>role:</label>
-        <select name="role" required>
-            <option value="buyer">buyer</option>
-            <option value="seller">seller</option>
-        </select><br>
-        <button type="submit">register</button>
+        {{ form.as_p }}
+        <button type="submit">Register</button>
     </form>
-    <a href="{% url 'login' %}">Already have an account? Login</a>
+    <p><a href="{% url 'login' %}">Already have an account? Login</a></p>
 </body>
 </html>
