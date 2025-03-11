@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Product, Review
 from categories.models import Category
+from django.core.paginator import Paginator
 from orders.models import Order, OrderItem
 
 def product_list(request):
@@ -20,6 +21,12 @@ def product_list(request):
         products = products.filter(category_id=category_id)
 
     categories = Category.objects.all()  # obtain all the categories
+
+    # Pagination
+    paginator = Paginator(products, 10)  # Display 10 products per page
+    page_number = request.GET.get('page')
+    products_page = paginator.get_page(page_number)
+
     context = {
         'products': products,
         'categories': categories,
@@ -41,7 +48,7 @@ def product_detail(request, product_id):
 def create_product(request):
     # only buyer can publish products
     if not request.user.is_seller:
-        messages.error(request, 'only buyer can publish products！')
+        messages.error(request, 'Only seller can publish products！')
         return redirect('product_list')
 
     if request.method == 'POST':

@@ -1,36 +1,46 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Shopping - Manage inventory</title>
-</head>
-<body>
-    <h1>Manage inventory</h1>
-    {% if messages %}
-        {% for message in messages %}
-            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-        {% endfor %}
-    {% endif %}
-    <div>
-        <a href="{% url 'create_product' %}">Add new product</a>
-    </div>
-    <div>
-        {% if products %}
-            <ul>
+{% extends 'base.html' %}
+
+{% block title %}Manage Inventory{% endblock %}
+
+{% block content %}
+<h1 class="mt-4">Manage Inventory</h1>
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="container">
+    {% if products %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Stock</th>
+                    <th>Price</th>
+                    <th>Operate</th>
+                </tr>
+            </thead>
+            <tbody>
                 {% for product in products %}
-                    <li>
-                        {{ product.name }} - price: ${{ product.price }} - stock: {{ product.stock }}
-                        - status: {{ product.is_active|yesno:"listed,removed" }}
-                        <a href="{% url 'toggle_product' product.id %}">
-                            {% if product.is_active %}removed{% else %}listed{% endif %}
-                        </a>
-                        <a href="{% url 'update_stock' product.id %}">update the stock</a>
-                    </li>
+                    <tr>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.stock }}</td>
+                        <td>${{ product.price | floatformat:2 }}</td>
+                        <td>
+                            <a href="{% url 'update_stock' product.id %}" class="btn btn-warning btn-sm">Update Inventory</a>
+                        </td>
+                    </tr>
                 {% endfor %}
-            </ul>
-        {% else %}
-            <p>You haven't published any products yet.</p>
-        {% endif %}
-    </div>
-    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
-</body>
-</html>
+            </tbody>
+        </table>
+        <a href="{% url 'create_product' %}" class="btn btn-primary mt-3">Add new product</a>
+    {% else %}
+        <p class="text-muted">You currently have no product in stock</p>
+        <a href="{% url 'create_product' %}" class="btn btn-primary mt-3">Add new product</a>
+    {% endif %}
+</div>
+{% endblock %}

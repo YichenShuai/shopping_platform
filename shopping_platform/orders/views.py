@@ -6,6 +6,7 @@ from cart.models import Cart
 from products.models import Product
 from users.models import User, Address
 from django.utils import timezone
+from django.db import transaction
 
 @login_required
 def checkout(request):
@@ -19,77 +20,103 @@ def checkout(request):
         return redirect('view_cart')
 
     total_amount = sum(item.product.price * item.quantity for item in cart_items)
-    if request.user.balance < total_amount:
-        messages.error(request, 'Insufficient balance, please recharge!')
-        return redirect('view_cart')
-
     addresses = request.user.addresses.all()
 
+    selected_cart_items = None
+
     if request.method == 'POST':
+        selected_items = request.POST.getlist('selected_items')  # Get the ID of the checked shopping cart item
+        selected_cart_items = cart_items.filter(id__in=selected_items)
+
+        if not selected_cart_items:
+            messages.error(request, 'Please select at least one item to checkout!')
+            return redirect('view_cart')
+
+        # Calculate the total amount of the selected items
+        checkout_total = sum(item.product.price * item.quantity for item in selected_cart_items)
+        if request.user.balance < checkout_total:
+            messages.error(request, 'Insufficient balance, please recharge!')
+            return redirect('view_cart')
+
         address_mode = request.POST.get('address_mode')
         if address_mode not in ['single', 'multiple']:
             messages.error(request, 'Please select address mode!')
-            return redirect('checkout')
+            return redirect('view_cart')
 
         if address_mode == 'single':
             address_id = request.POST.get('delivery_address')
             if not address_id:
                 messages.error(request, 'Please select or fill in the delivery address!')
-                return redirect('checkout')
-            delivery_address = get_object_or_404(Address, id=address_id, user=request.user).address_line1
+                return redirect('view_cart')
+            address = get_object_or_404(Address, id=address_id, user=request.user)
+            delivery_address = f"{address.address_line1}, {address.address_line2}, {address.city}, {address.state}, {address.postal_code}, {address.country}"
         else:
             delivery_addresses = {}
-            for item in cart_items:
+            for item in selected_cart_items:
                 address_id = request.POST.get(f'delivery_address_{item.id}')
                 if not address_id:
                     messages.error(request, f'Please select a shipping address for product {item.product.name}')
-                    return redirect('checkout')
-                delivery_addresses[item] = get_object_or_404(Address, id=address_id, user=request.user).address_line1
+                    return redirect('view_cart')
+                address = get_object_or_404(Address, id=address_id, user=request.user)
+                delivery_addresses[item] = f"{address.address_line1}, {address.address_line2}, {address.city}, {address.state}, {address.postal_code}, {address.country}"
 
-        orders = []
-        for item in cart_items:
-            item_total = item.product.price * item.quantity
-            delivery_address = (delivery_addresses.get(item) if address_mode == 'multiple'
-                              else delivery_address)
+        with transaction.atomic():
+            # Check Inventory
+            for item in selected_cart_items:
+                if item.product.stock < item.quantity:
+                    messages.error(request, f'Insufficient stock for {item.product.name}! Only {item.product.stock} left.')
+                    return redirect('view_cart')
 
-            order = Order(
-                buyer=request.user,
-                total_amount=item_total,
-                delivery_address=delivery_address,
-                status='Pending',
-                payment_status='Pending Payment'
-            )
-            order.save()
+            # Create order
+            orders = []
+            for item in selected_cart_items:
+                item_total = item.product.price * item.quantity
+                delivery_address = (delivery_addresses.get(item) if address_mode == 'multiple' else delivery_address)
 
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                quantity=item.quantity,
-                price=item.product.price
-            )
-            item.product.stock -= item.quantity
-            item.product.sales += item.quantity
-            item.product.save()
+                order = Order(
+                    buyer=request.user,
+                    total_amount=item_total,
+                    delivery_address=delivery_address,
+                    status='Pending',
+                    payment_status='Pending Payment'
+                )
+                order.save()
 
-            orders.append(order)
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price=item.product.price
+                )
+                item.product.stock -= item.quantity
+                item.product.sales += item.quantity
+                item.product.save()
 
-        request.user.balance -= total_amount
-        request.user.save()
+                orders.append(order)
 
-        for order in orders:
-            order.payment_status = 'Paid'
-            order.save()
+            # Deduct the balance
+            request.user.balance -= checkout_total
+            request.user.save()
 
-        cart_items.delete()
-        messages.success(request, 'Order created and paid successfully!')
-        return redirect('order_history')
+            # Update order status
+            for order in orders:
+                order.payment_status = 'Paid'
+                order.save()
 
+            # Delete purchased cart items
+            selected_cart_items.delete()
+
+        messages.success(request, 'Selected items checked out and paid successfully!')
+        return redirect('view_cart')
+    checkout_total = sum(item.product.price * item.quantity for item in selected_cart_items)
     context = {
         'cart_items': cart_items,
         'total': total_amount,
+        'checkout_total': checkout_total if request.method == 'POST' else 0,  # 仅 POST 时计算
         'addresses': addresses,
     }
     return render(request, 'orders/checkout.html', context)
+
 
 
 @login_required

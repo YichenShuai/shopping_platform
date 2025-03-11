@@ -1,77 +1,61 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Shopping - Product_list</title>
-</head>
-<body>
-    <h1>Shopping</h1>
-    <div>
-        <form method="get" action="{% url 'product_list' %}">
-            <input type="text" name="q" value="{{ query }}" placeholder="Searching...">
-            <select name="category">
-                <option value="">All products</option>
-                {% for category in categories %}
-                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+{% extends 'base.html' %}
+
+{% block title %}Shopping{% endblock %}
+
+{% block content %}
+<h1>Shopping</h1>
+<div>
+    <form method="get">
+        <input type="text" name="q" value="{{ query }}" placeholder="Searching...">
+        <select name="category">
+            <option value="">All products</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
                         {{ category.name }}
-                    </option>
-                {% endfor %}
-            </select>
-            <button type="submit">Searching</button>
-        </form>
-    </div>
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Searching</button>
+    </form>
+</div>
+
+<div>
+    {% if products %}
+        <ul>
+            {% for product in products %}
+                <li style="margin-bottom: 15px;">
+                    <a href="{% url 'product_detail' product.id %}">{{ product.name }}</a> -
+                    Price: ${{ product.price | floatformat:2 }} -
+                    {% if product.stock > 0 %}
+                        Stock: {{ product.stock }}
+                    {% else %}
+                        <span style="color: red;">Out of Stock</span>
+                    {% endif %} -
+                    Seller: {{ product.seller.username }}<br>
+                    <a href="{% url 'product_detail' product.id %}">Details</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'add_to_cart' product.id %}">Cart</a>
+                    {% else %}
+                        <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}">Add to cart (please log in first)</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>no product</p>
+    {% endif %}
+</div>
+
+{% if products.has_other_pages %}
     <div>
-        {% if user.is_authenticated %}
-            <p>
-                Welcome, {{ user.username }}!
-                <a href="{% url 'myaccount' %}">My account</a> |
-                {% if user.is_buyer %}
-                    <a href="{% url 'view_cart' %}">cart</a> |
-                    <a href="{% url 'order_history' %}">order history</a> |
-                {% endif %}
-                {% if user.is_seller %}
-                    <a href="{% url 'manage_inventory' %}">manage inventory</a> |
-                    <a href="{% url 'seller_orders' %}">seller order history</a> |
-                {% endif %}
-                {% if user.is_admin %}
-                    <a href="{% url 'statistics' %}">Statistics</a> |
-                {% endif %}
-                <a href="{% url 'logout' %}">logout</a>
-            </p>
-            {% if user.is_seller %}
-                <p><a href="{% url 'create_product' %}">Add new product</a></p>
-            {% endif %}
-        {% else %}
-            <p>
-                <a href="{% url 'login' %}">login</a> |
-                <a href="{% url 'register' %}">register</a> |
-                <a href="{% url 'login' %}?next={% url 'view_cart' %}">cart</a>
-            </p>
+        {% if products.has_previous %}
+            <a href="?page={{ products.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">Last Page</a>
+        {% endif %}
+        <span> {{ products.number }}  /  {{ products.paginator.num_pages }} </span>
+        {% if products.has_next %}
+            <a href="?page={{ products.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">Next Page</a>
         {% endif %}
     </div>
-    <div>
-        <h2>product list</h2>
-        {% if products %}
-            <ul>
-                {% for product in products %}
-                    <li>
-                        {{ product.name }} - price: ${{ product.price }}
-                        {% if product.stock > 0 %}
-                            stock: {{ product.stock }}
-                        {% else %}
-                            out of stock
-                        {% endif %}
-                        <a href="{% url 'product_detail' product.id %}">Check the details</a>
-                        {% if user.is_authenticated %}
-                            <a href="{% url 'add_to_cart' product.id %}">Add to cart</a>
-                        {% else %}
-                            <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}">Add to cart (Please login first)</a>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>no product</p>
-        {% endif %}
-    </div>
-</body>
-</html>
+{% endif %}
+
+{% endblock %}

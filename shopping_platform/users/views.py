@@ -20,6 +20,12 @@ def register(request):
     return render(request, 'users/register.html', {'form': form})
 
 def login_view(request):
+
+    storage = messages.get_messages(request)
+    for message in storage:
+        if 'logout' in str(message):
+            storage.used = True
+    storage.used = False
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
@@ -41,7 +47,11 @@ def logout_view(request):
 @login_required
 def myaccount(request):
     user = request.user
-    addresses = user.addresses.all()
+    try:
+        addresses = user.addresses.all()
+    except Address.DoesNotExist:
+        addresses = []
+        messages.error(request, 'You do not have an address available.')
 
     if request.method == 'POST':
         if 'delete_address' in request.POST:

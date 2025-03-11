@@ -1,80 +1,104 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Shopping - Checkout</title>
-    <style>
-        .hidden { display: none; }
-    </style>
-</head>
-<body>
-    <h1>Checkout</h1>
-    {% if messages %}
-        {% for message in messages %}
-            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-        {% endfor %}
-    {% endif %}
-    <div>
-        <h2>Shopping cart contents</h2>
-        {% if cart_items %}
-            <form method="post">
-                {% csrf_token %}
-                <div>
-                    <label>Address Mode:</label>
-                    <input type="radio" name="address_mode" value="single" checked onchange="toggleAddresses()"> Single Address
-                    <input type="radio" name="address_mode" value="multiple" onchange="toggleAddresses()"> Multiple Address
+{% extends 'base.html' %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<h1 class="mt-4">Checkout</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="container">
+    {% if cart_items %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                    <tr>
+                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>${{ item.product.price | floatformat:2 }}</td>
+                        <td>${{ item.product.price | mul:item.quantity | floatformat:2 }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h4>Total (selected items): ${{ checkout_total | floatformat:2 }}</h4>
+        <p>Total of all products: ${{ total | floatformat:2 }}</p>
+        <p>Your balance: ${{ user.balance | floatformat:2 }}</p>
+        {% if user.balance < checkout_total %}
+            <p class="text-danger">Insufficient balance, please recharge!</p>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Address Mode:</label>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="address_mode" value="single" checked onchange="toggleAddresses()">
+                    <label class="form-check-label">Single Address</label>
                 </div>
-                <div id="single-address" class="single-address">
-                    <label>Select delivery address:</label>
-                    <select name="delivery_address" required>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="address_mode" value="multiple" onchange="toggleAddresses()">
+                    <label class="form-check-label">Multiple Address</label>
+                </div>
+            </div>
+            <div id="single-address" class="single-address">
+                <label class="form-label">Select delivery address:</label>
+                <select name="delivery_address" class="form-select" required>
+                    <option value="">Please select address</option>
+                    {% for address in addresses %}
+                        <option value="{{ address.id }}">{{ address.address_line1 }}, {{ address.city }}, {{ address.country }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="multiple-addresses" class="multiple-addresses" style="display: none;">
+                {% for item in cart_items %}
+                    <h5>Product: {{ item.product.name }} (Seller: {{ item.product.seller.username }})</h5>
+                    <label class="form-label">Please select delivery address ({{ item.product.name }}):</label>
+                    <select name="delivery_address_{{ item.id }}" class="form-select" required>
                         <option value="">Please select address</option>
                         {% for address in addresses %}
                             <option value="{{ address.id }}">{{ address.address_line1 }}, {{ address.city }}, {{ address.country }}</option>
                         {% endfor %}
-                    </select><br>
-                </div>
-                <div id="multiple-addresses" class="multiple-addresses hidden">
-                    {% for item in cart_items %}
-                        <h3>Product: {{ item.product.name }} (seller: {{ item.product.seller.username }})</h3>
-                        <ul>
-                            <li>quantity: {{ item.quantity }} - total: ${{ item.product.price | floatformat:2 }}</li>
-                        </ul>
-                        <label>Select delivery address ({{ item.product.name }}):</label>
-                        <select name="delivery_address_{{ item.id }}" required>
-                            <option value="">Please select address</option>
-                            {% for address in addresses %}
-                                <option value="{{ address.id }}">{{ address.address_line1 }}, {{ address.city }}, {{ address.country }}</option>
-                            {% endfor %}
-                        </select><br>
-                    {% endfor %}
-                </div>
-                <p>Total: ${{ total | floatformat:2 }}</p>
-                <p>Your Balance: ${{ user.balance | floatformat:2 }}</p>
-                {% if user.balance < total %}
-                    <p style="color: red;">Insufficient balance, please recharge!</p>
-                {% endif %}
-                <button type="submit">Confirm payment</button>
-            </form>
-        {% else %}
-            <p>The shopping cart is empty.</p>
-        {% endif %}
-    </div>
-    <p><a href="{% url 'view_cart' %}">Return to Cart</a></p>
-    <p><a href="{% url 'myaccount' %}">Management Address</a></p>
+                    </select>
+                {% endfor %}
+            </div>
+<button type="submit" class="btn btn-primary mt-3" {% if user.balance < checkout_total %}disabled{% endif %}>Confirm Payment</button>
+        </form>
+    {% else %}
+        <p class="text-muted">The cart is empty.</p>
+    {% endif %}
+    <p><a href="{% url 'view_cart' %}" class="btn btn-secondary mt-3">Return to Cart</a></p>
+    <p><a href="{% url 'myaccount' %}" class="btn btn-secondary mt-3">Management Address</a></p>
+</div>
 
-    <script>
-        function toggleAddresses() {
-            const mode = document.querySelector('input[name="address_mode"]:checked').value;
-            const singleAddress = document.getElementById('single-address');
-            const multipleAddresses = document.getElementById('multiple-addresses');
-            if (mode === 'single') {
-                singleAddress.classList.remove('hidden');
-                multipleAddresses.classList.add('hidden');
-            } else {
-                singleAddress.classList.add('hidden');
-                multipleAddresses.classList.remove('hidden');
-            }
+<script>
+    function toggleAddresses() {
+        const mode = document.querySelector('input[name="address_mode"]:checked').value;
+        const singleAddress = document.getElementById('single-address');
+        const multipleAddresses = document.getElementById('multiple-addresses');
+        if (mode === 'single') {
+            singleAddress.style.display = 'block';
+            multipleAddresses.style.display = 'none';
+        } else {
+            singleAddress.style.display = 'none';
+            multipleAddresses.style.display = 'block';
         }
-        window.onload = toggleAddresses;
-    </script>
-</body>
-</html>
+    }
+    window.onload = toggleAddresses;
+</script>
+{% endblock %}

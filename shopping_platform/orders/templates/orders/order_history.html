@@ -1,43 +1,43 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Shopping - Order history</title>
-</head>
-<body>
-    <h1>Order history</h1>
-    {% if messages %}
-        {% for message in messages %}
+{% extends 'base.html' %}
+
+{% block title %}Order History{% endblock %}
+
+{% block content %}
+<h1>Order history</h1>
+{% if messages %}
+    {% for message in messages %}
+        {% if 'order' in message.message or 'history' in message.message %}
             <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-        {% endfor %}
-    {% endif %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+<div>
     {% if orders %}
-        <ul>
-            {% for order in orders %}
-                <li>
-                    order #{{ order.id }} - total: ${{ order.total_amount | floatformat:2 }}
-                    - status: {{ order.status }}
-                    - payment status: {{ order.payment_status }}
-                    - order time: {{ order.created_at }}
-                    {% if order.shipped_at %}
-                        - shipped time: {{ order.shipped_at }}
-                    {% endif %}
-                    {% if order.refunded_at %}
-                        - refund time: {{ order.refunded_at }}
-                    {% endif %}
-                    <ul>
-                        {% for item in order.items.all %}
-                            <li>{{ item.product.name }} - quantity: {{ item.quantity }} - price: ${{ item.price | floatformat:2 }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% if order.status in 'Shipped,Delivered' and not order.return_requested %}
-                        <a href="{% url 'request_return' order.id %}">Request a return</a>
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
+        {% for order in orders %}
+            <div style="border: 1px solid #ddd; padding: 10px; margin: 10px 0;">
+                <p>OrderID: {{ order.id }}</p>
+                <p>total price: ${{ order.total_amount | floatformat:2 }}</p>
+                <p>delivery address: {{ order.delivery_address }}</p>
+                <p>order status: {{ order.status }}</p>
+                <p>payment status: {{ order.payment_status }}</p>
+                <p>creation time: {{ order.created_at }}</p>
+                <h3>OrderItem</h3>
+                <ul>
+                    {% for item in order.order_items.all %}
+                        <li>{{ item.product.name }} - quantity: {{ item.quantity }} - price: ${{ item.price | floatformat:2 }}</li>
+                    {% endfor %}
+                </ul>
+                {% if order.status == 'Delivered' and not order.is_return_requested %}
+                    <form method="post" action="{% url 'request_return' order.id %}">
+                        {% csrf_token %}
+                        <button type="submit">Request a return</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endfor %}
     {% else %}
         <p>No orders yet</p>
     {% endif %}
-    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
-</body>
-</html>
+</div>
+<p><a href="{% url 'product_list' %}">Return to product list</a></p>
+{% endblock %}

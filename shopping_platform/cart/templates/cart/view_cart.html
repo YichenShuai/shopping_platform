@@ -1,31 +1,63 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Shopping - Cart</title>
-</head>
-<body>
-    <h1>My Cart</h1>
-    {% if messages %}
-        {% for message in messages %}
-            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
-        {% endfor %}
+{% extends 'base.html' %}
+
+{% block title %}Cart{% endblock %}
+
+{% block content %}
+<h1 class="mt-4">Cart</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="container">
+    {% if cart_items %}
+        <form method="post" action="{% url 'checkout' %}">
+            {% csrf_token %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        <th>Product Name</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                        <th>Operate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_dict in cart_items %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="selected_items" value="{{ item_dict.item.id }}" checked>
+                            </td>
+                            <td>{{ item_dict.item.product.name }}</td>
+                            <td>
+                                <form method="post" action="{% url 'update_cart' item_dict.item.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="number" name="quantity" value="{{ item_dict.item.quantity }}" min="1" style="width: 60px;">
+                                    <button type="submit" class="btn btn-warning btn-sm">Update</button>
+                                </form>
+                            </td>
+                            <td>${{ item_dict.item.product.price | floatformat:2 }}</td>
+                            <td>${{ item_dict.subtotal | floatformat:2 }}</td>
+                            <td>
+                                <a href="{% url 'remove_from_cart' item_dict.item.id %}" class="btn btn-danger btn-sm">Delete</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <h4>Total: ${{ total | floatformat:2 }} (selected items will be calculated based on actual selection)</h4>
+            <button type="submit" class="btn btn-primary mt-3">Checkout</button>
+        </form>
+    {% else %}
+        <p class="text-muted">The cart is empty.</p>
     {% endif %}
-    <div>
-        {% if cart_items %}
-            <ul>
-                {% for item in cart_items %}
-                    <li>
-                        {{ item.product.name }} - quantity: {{ item.quantity }} - total: ${{ item.product.price | floatformat:2 }}
-                        <a href="#">delete</a>  <!-- (for future) -->
-                    </li>
-                {% endfor %}
-            </ul>
-            <p>total: ${{ total | floatformat:2 }}</p>
-            <a href="{% url 'checkout' %}">Check out</a>  <!-- (for future) -->
-        {% else %}
-            <p>Empty cart</p>
-        {% endif %}
-    </div>
-    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
-</body>
-</html>
+    <p><a href="{% url 'product_list' %}" class="btn btn-secondary mt-3">Continue shopping</a></p>
+</div>
+{% endblock %}
