@@ -23,8 +23,9 @@
         {% if user.is_authenticated %}
             <p>
                 Welcome, {{ user.username }}!
-                <a href="{% url 'view_cart' %}">cart</a> |
+                <a href="{% url 'myaccount' %}">My account</a> |
                 {% if user.is_buyer %}
+                    <a href="{% url 'view_cart' %}">cart</a> |
                     <a href="{% url 'order_history' %}">order history</a> |
                 {% endif %}
                 {% if user.is_seller %}

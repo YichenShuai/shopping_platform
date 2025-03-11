@@ -4,50 +4,48 @@ from django.contrib import messages
 from .models import Order, OrderItem
 from cart.models import Cart
 from products.models import Product
-from users.models import User
+from users.models import User, Address
 from django.utils import timezone
 
 @login_required
 def checkout(request):
     if not request.user.is_buyer:
-        messages.error(request, 'Only buyer can checkout orders!')
+        messages.error(request, 'Only buyers can checkout!')
         return redirect('product_list')
 
     cart_items = Cart.objects.filter(buyer=request.user)
     if not cart_items:
-        messages.error(request, 'Cart is empty!')
+        messages.error(request, 'The shopping cart is empty, unable to checkout!')
         return redirect('view_cart')
 
-    # 计算总金额
     total_amount = sum(item.product.price * item.quantity for item in cart_items)
     if request.user.balance < total_amount:
-        messages.error(request, 'Insufficient balance! Please recharge.')
+        messages.error(request, 'Insufficient balance, please recharge!')
         return redirect('view_cart')
+
+    addresses = request.user.addresses.all()
 
     if request.method == 'POST':
         address_mode = request.POST.get('address_mode')
         if address_mode not in ['single', 'multiple']:
-            messages.error(request, 'Please choose either single, or multiple address.')
+            messages.error(request, 'Please select address mode!')
             return redirect('checkout')
 
         if address_mode == 'single':
-            # All the products send to one address.
-            delivery_address = request.POST.get('delivery_address')
-            if not delivery_address:
-                messages.error(request, 'Please write the shipping address!')
+            address_id = request.POST.get('delivery_address')
+            if not address_id:
+                messages.error(request, 'Please select or fill in the delivery address!')
                 return redirect('checkout')
+            delivery_address = get_object_or_404(Address, id=address_id, user=request.user).address_line1
         else:
-            # Products send to different address.
             delivery_addresses = {}
             for item in cart_items:
-                address_key = f'delivery_address_{item.id}'
-                delivery_address = request.POST.get(address_key)
-                if not delivery_address:
-                    messages.error(request, f'Please write the shipping address for {item.product.name} .')
+                address_id = request.POST.get(f'delivery_address_{item.id}')
+                if not address_id:
+                    messages.error(request, f'Please select a shipping address for product {item.product.name}')
                     return redirect('checkout')
-                delivery_addresses[item] = delivery_address
+                delivery_addresses[item] = get_object_or_404(Address, id=address_id, user=request.user).address_line1
 
-        # create the order
         orders = []
         for item in cart_items:
             item_total = item.product.price * item.quantity
@@ -63,37 +61,33 @@ def checkout(request):
             )
             order.save()
 
-            # create items of order
             OrderItem.objects.create(
                 order=order,
                 product=item.product,
                 quantity=item.quantity,
                 price=item.product.price
             )
-            # update inventory
             item.product.stock -= item.quantity
             item.product.sales += item.quantity
             item.product.save()
 
             orders.append(order)
 
-        # One-time deduction of buyer's balance
         request.user.balance -= total_amount
         request.user.save()
 
-        # Update payment status of all orders
         for order in orders:
             order.payment_status = 'Paid'
             order.save()
 
-        # Empty Cart
         cart_items.delete()
-        messages.success(request, 'Order created and paid successfully！')
+        messages.success(request, 'Order created and paid successfully!')
         return redirect('order_history')
 
     context = {
         'cart_items': cart_items,
-        'total': total_amount
+        'total': total_amount,
+        'addresses': addresses,
     }
     return render(request, 'orders/checkout.html', context)
 
