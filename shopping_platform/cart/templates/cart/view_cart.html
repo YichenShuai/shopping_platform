@@ -16,42 +16,42 @@
 
 <div class="container">
     {% if cart_items %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Operate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item_dict in cart_items %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="selected_items" value="{{ item_dict.item.id }}" checked>
+                        </td>
+                        <td>{{ item_dict.item.product.name }}</td>
+                        <td>
+                            <form method="post" action="{% url 'update_cart' item_dict.item.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="number" name="quantity" value="{{ item_dict.item.quantity }}" min="1" style="width: 60px;">
+                                <button type="submit" class="btn btn-warning btn-sm">Update</button>
+                            </form>
+                        </td>
+                        <td>${{ item_dict.item.product.price | floatformat:2 }}</td>
+                        <td>${{ item_dict.subtotal | floatformat:2 }}</td>
+                        <td>
+                            <a href="{% url 'remove_from_cart' item_dict.item.id %}" class="btn btn-danger btn-sm">Delete</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         <form method="post" action="{% url 'checkout' %}">
             {% csrf_token %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Select</th>
-                        <th>Product Name</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Total</th>
-                        <th>Operate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item_dict in cart_items %}
-                        <tr>
-                            <td>
-                                <input type="checkbox" name="selected_items" value="{{ item_dict.item.id }}" checked>
-                            </td>
-                            <td>{{ item_dict.item.product.name }}</td>
-                            <td>
-                                <form method="post" action="{% url 'update_cart' item_dict.item.id %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <input type="number" name="quantity" value="{{ item_dict.item.quantity }}" min="1" style="width: 60px;">
-                                    <button type="submit" class="btn btn-warning btn-sm">Update</button>
-                                </form>
-                            </td>
-                            <td>${{ item_dict.item.product.price | floatformat:2 }}</td>
-                            <td>${{ item_dict.subtotal | floatformat:2 }}</td>
-                            <td>
-                                <a href="{% url 'remove_from_cart' item_dict.item.id %}" class="btn btn-danger btn-sm">Delete</a>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
             <h4>Total: ${{ total | floatformat:2 }} (selected items will be calculated based on actual selection)</h4>
             <button type="submit" class="btn btn-primary mt-3">Checkout</button>
         </form>

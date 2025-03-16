@@ -3,59 +3,116 @@
 {% block title %}Shopping{% endblock %}
 
 {% block content %}
-<h1>Shopping</h1>
-<div>
-    <form method="get">
-        <input type="text" name="q" value="{{ query }}" placeholder="Searching...">
-        <select name="category">
-            <option value="">All products</option>
-            {% for category in categories %}
-                <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+<h1 class="mt-4">Shopping</h1>
+
+<!-- Search and Filter Form -->
+<form method="get" class="mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-md-6">
+            <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search products...">
+        </div>
+        <div class="col-md-4">
+            <select name="category" class="form-control">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
                         {{ category.name }}
-                </option>
-            {% endfor %}
-        </select>
-        <button type="submit">Searching</button>
-    </form>
-</div>
-
-<div>
-    {% if products %}
-        <ul>
-            {% for product in products %}
-                <li style="margin-bottom: 15px;">
-                    <a href="{% url 'product_detail' product.id %}">{{ product.name }}</a> -
-                    Price: ${{ product.price | floatformat:2 }} -
-                    {% if product.stock > 0 %}
-                        Stock: {{ product.stock }}
-                    {% else %}
-                        <span style="color: red;">Out of Stock</span>
-                    {% endif %} -
-                    Seller: {{ product.seller.username }}<br>
-                    <a href="{% url 'product_detail' product.id %}">Details</a>
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'add_to_cart' product.id %}">Cart</a>
-                    {% else %}
-                        <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}">Add to cart (please log in first)</a>
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>no product</p>
-    {% endif %}
-</div>
-
-{% if products.has_other_pages %}
-    <div>
-        {% if products.has_previous %}
-            <a href="?page={{ products.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">Last Page</a>
-        {% endif %}
-        <span> {{ products.number }}  /  {{ products.paginator.num_pages }} </span>
-        {% if products.has_next %}
-            <a href="?page={{ products.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">Next Page</a>
-        {% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
     </div>
+    <!-- 添加排序选择（如果实现了动态排序） -->
+    {% if sort %}
+    <div class="row g-3 mt-2">
+        <div class="col-md-4">
+            <label for="sort" class="form-label">Sort by:</label>
+            <select name="sort" id="sort" class="form-control" onchange="this.form.submit()">
+                <option value="name" {% if sort == 'name' %}selected{% endif %}>Name</option>
+                <option value="price" {% if sort == 'price' %}selected{% endif %}>Price (Low to High)</option>
+                <option value="-price" {% if sort == '-price' %}selected{% endif %}>Price (High to Low)</option>
+            </select>
+        </div>
+    </div>
+    {% endif %}
+</form>
+
+<!-- Product List -->
+{% if products %}
+    <div class="row">
+        {% for product in products %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'product_detail' product.id %}" class="text-decoration-none">{{ product.name }}</a>
+                        </h5>
+                        <p class="card-text">Price: ${{ product.price | floatformat:2 }}</p>
+                        <p class="card-text">
+                            {% if product.stock > 0 %}
+                                Stock: {{ product.stock }}
+                            {% else %}
+                                <span class="text-danger">Out of Stock</span>
+                            {% endif %}
+                        </p>
+                        <p class="card-text">Seller: {{ product.seller.username }}</p>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'product_detail' product.id %}" class="btn btn-primary btn-sm">Details</a>
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'add_to_cart' product.id %}" class="btn btn-success btn-sm">Add to Cart</a>
+                            {% else %}
+                                <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}" class="btn btn-warning btn-sm">Add to Cart (Login)</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="text-muted">No products found.</p>
+{% endif %}
+
+<!-- Pagination -->
+{% if products.has_other_pages %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mt-4">
+            {% if products.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ products.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Previous</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+            {% endif %}
+
+            {% for num in products.paginator.page_range %}
+                {% if products.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > products.number|add:-3 and num < products.number|add:3 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if products.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ products.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Next</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
 {% endif %}
 
 {% endblock %}

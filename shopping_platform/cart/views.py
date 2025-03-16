@@ -12,9 +12,9 @@ def add_to_cart(request, product_id):
         if not created:
             cart_item.quantity += 1
             cart_item.save()
-        messages.success(request, f'{product.name} successfully added to cart！')
+        messages.success(request, f'{product.name} successfully added to cart!')
     else:
-        messages.error(request, 'Out of stock！')
+        messages.error(request, 'Out of stock!')
     return redirect('product_list')
 
 @login_required
@@ -29,7 +29,7 @@ def view_cart(request):
         } for item in cart_items
     ]
     context = {
-        'cart_items': cart_items_with_subtotal,  # include subtotals
+        'cart_items': cart_items_with_subtotal,
         'total': total
     }
     return render(request, 'cart/view_cart.html', context)
@@ -46,12 +46,21 @@ def remove_from_cart(request, cart_id):
 def update_cart(request, cart_id):
     if request.method == 'POST':
         cart_item = get_object_or_404(Cart, id=cart_id, buyer=request.user)
-        new_quantity = int(request.POST.get('quantity', 1))
-        if new_quantity > 0:
-            cart_item.quantity = new_quantity
-            cart_item.save()
-            messages.success(request, f'Cart updated for {cart_item.product.name}!')
+        new_quantity = request.POST.get('quantity')
+        if new_quantity:
+            try:
+                new_quantity = int(new_quantity)
+                if new_quantity > 0:
+                    if new_quantity <= cart_item.product.stock:  # 检查库存
+                        cart_item.quantity = new_quantity
+                        cart_item.save()
+                        messages.success(request, f'Cart updated for {cart_item.product.name}!')
+                    else:
+                        messages.error(request, f'Insufficient stock for {cart_item.product.name}! Only {cart_item.product.stock} left.')
+                else:
+                    messages.error(request, 'Quantity must be greater than 0!')
+            except ValueError:
+                messages.error(request, 'Invalid quantity!')
         else:
-            messages.error(request, 'Quantity must be greater than 0!')
+            messages.error(request, 'Quantity is required!')
     return redirect('view_cart')
-

@@ -10,7 +10,7 @@ def product_list(request):
     # Searching and filtering
     query = request.GET.get('q')
     category_id = request.GET.get('category')
-    products = Product.objects.filter(is_active=True)  # Show only listed products
+    products = Product.objects.filter(is_active=True).order_by('name')
 
     # Searching
     if query:
@@ -28,7 +28,7 @@ def product_list(request):
     products_page = paginator.get_page(page_number)
 
     context = {
-        'products': products,
+        'products': products_page,  # 使用分页后的对象
         'categories': categories,
         'query': query or '',
         'selected_category': category_id or ''

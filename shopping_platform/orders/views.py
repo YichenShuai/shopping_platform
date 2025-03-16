@@ -22,32 +22,82 @@ def checkout(request):
     total_amount = sum(item.product.price * item.quantity for item in cart_items)
     addresses = request.user.addresses.all()
 
-    selected_cart_items = None
+    # 确保用户有地址
+    if not addresses:
+        messages.error(request, 'Please add at least one address before checkout!')
+        return redirect('myaccount')
+
+    cart_items_with_subtotal = [
+        {
+            'item': item,
+            'subtotal': item.product.price * item.quantity
+        } for item in cart_items
+    ]
+
+    # 初始化变量
+    selected_items = request.POST.getlist('selected_items') if request.method == 'POST' else []
+    address_mode = request.POST.get('address_mode', 'single') if request.method == 'POST' else 'single'
+    checkout_total = 0
 
     if request.method == 'POST':
-        selected_items = request.POST.getlist('selected_items')  # Get the ID of the checked shopping cart item
+        # 调试：打印 selected_items
+        print("Selected Items:", selected_items)
+
         selected_cart_items = cart_items.filter(id__in=selected_items)
 
         if not selected_cart_items:
             messages.error(request, 'Please select at least one item to checkout!')
-            return redirect('view_cart')
+            return render(request, 'orders/checkout.html', {
+                'cart_items': cart_items_with_subtotal,
+                'total': total_amount,
+                'checkout_total': checkout_total,
+                'addresses': addresses,
+                'selected_items': selected_items,
+                'address_mode': address_mode,
+            })
 
-        # Calculate the total amount of the selected items
-        checkout_total = sum(item.product.price * item.quantity for item in selected_cart_items)
+        selected_cart_items_with_subtotal = [
+            {
+                'item': item,
+                'subtotal': item.product.price * item.quantity
+            } for item in selected_cart_items
+        ]
+        checkout_total = sum(item['subtotal'] for item in selected_cart_items_with_subtotal)
+
         if request.user.balance < checkout_total:
             messages.error(request, 'Insufficient balance, please recharge!')
-            return redirect('view_cart')
+            return render(request, 'orders/checkout.html', {
+                'cart_items': cart_items_with_subtotal,
+                'total': total_amount,
+                'checkout_total': checkout_total,
+                'addresses': addresses,
+                'selected_items': selected_items,
+                'address_mode': address_mode,
+            })
 
-        address_mode = request.POST.get('address_mode')
         if address_mode not in ['single', 'multiple']:
             messages.error(request, 'Please select address mode!')
-            return redirect('view_cart')
+            return render(request, 'orders/checkout.html', {
+                'cart_items': cart_items_with_subtotal,
+                'total': total_amount,
+                'checkout_total': checkout_total,
+                'addresses': addresses,
+                'selected_items': selected_items,
+                'address_mode': address_mode,
+            })
 
         if address_mode == 'single':
             address_id = request.POST.get('delivery_address')
             if not address_id:
                 messages.error(request, 'Please select or fill in the delivery address!')
-                return redirect('view_cart')
+                return render(request, 'orders/checkout.html', {
+                    'cart_items': cart_items_with_subtotal,
+                    'total': total_amount,
+                    'checkout_total': checkout_total,
+                    'addresses': addresses,
+                    'selected_items': selected_items,
+                    'address_mode': address_mode,
+                })
             address = get_object_or_404(Address, id=address_id, user=request.user)
             delivery_address = f"{address.address_line1}, {address.address_line2}, {address.city}, {address.state}, {address.postal_code}, {address.country}"
         else:
@@ -56,7 +106,14 @@ def checkout(request):
                 address_id = request.POST.get(f'delivery_address_{item.id}')
                 if not address_id:
                     messages.error(request, f'Please select a shipping address for product {item.product.name}')
-                    return redirect('view_cart')
+                    return render(request, 'orders/checkout.html', {
+                        'cart_items': cart_items_with_subtotal,
+                        'total': total_amount,
+                        'checkout_total': checkout_total,
+                        'addresses': addresses,
+                        'selected_items': selected_items,
+                        'address_mode': address_mode,
+                    })
                 address = get_object_or_404(Address, id=address_id, user=request.user)
                 delivery_addresses[item] = f"{address.address_line1}, {address.address_line2}, {address.city}, {address.state}, {address.postal_code}, {address.country}"
 
@@ -108,12 +165,14 @@ def checkout(request):
 
         messages.success(request, 'Selected items checked out and paid successfully!')
         return redirect('view_cart')
-    checkout_total = sum(item.product.price * item.quantity for item in selected_cart_items)
+
     context = {
-        'cart_items': cart_items,
+        'cart_items': cart_items_with_subtotal,
         'total': total_amount,
-        'checkout_total': checkout_total if request.method == 'POST' else 0,  # 仅 POST 时计算
+        'checkout_total': checkout_total,
         'addresses': addresses,
+        'selected_items': selected_items,
+        'address_mode': address_mode,
     }
     return render(request, 'orders/checkout.html', context)
 
@@ -125,7 +184,7 @@ def order_history(request):
         messages.error(request, 'Only buyer can view purchase orders history!')
         return redirect('product_list')
 
-    orders = Order.objects.filter(buyer=request.user).order_by('-created_at')
+    orders = Order.objects.filter(buyer=request.user).order_by('-created_at').prefetch_related('items')
     context = {
         'orders': orders
     }

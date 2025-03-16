@@ -16,89 +16,125 @@
 
 <div class="container">
     {% if cart_items %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Product Name</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in cart_items %}
-                    <tr>
-                        <td>{{ item.product.name }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>${{ item.product.price | floatformat:2 }}</td>
-                        <td>${{ item.product.price | mul:item.quantity | floatformat:2 }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <h4>Total (selected items): ${{ checkout_total | floatformat:2 }}</h4>
-        <p>Total of all products: ${{ total | floatformat:2 }}</p>
-        <p>Your balance: ${{ user.balance | floatformat:2 }}</p>
-        {% if user.balance < checkout_total %}
-            <p class="text-danger">Insufficient balance, please recharge!</p>
-        {% endif %}
-
-        <form method="post">
+        <form method="post" action="{% url 'checkout' %}">
             {% csrf_token %}
-            <div class="mb-3">
-                <label class="form-label">Address Mode:</label>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="address_mode" value="single" checked onchange="toggleAddresses()">
-                    <label class="form-check-label">Single Address</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="address_mode" value="multiple" onchange="toggleAddresses()">
-                    <label class="form-check-label">Multiple Address</label>
-                </div>
-            </div>
-            <div id="single-address" class="single-address">
-                <label class="form-label">Select delivery address:</label>
-                <select name="delivery_address" class="form-select" required>
-                    <option value="">Please select address</option>
-                    {% for address in addresses %}
-                        <option value="{{ address.id }}">{{ address.address_line1 }}, {{ address.city }}, {{ address.country }}</option>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        <th>Product Name</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_dict in cart_items %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="selected_items" value="{{ item_dict.item.id }}" {% if item_dict.item.id|stringformat:"s" in selected_items %}checked{% endif %}>
+                            </td>
+                            <td>{{ item_dict.item.product.name }}</td>
+                            <td>{{ item_dict.item.quantity }}</td>
+                            <td>${{ item_dict.item.product.price | floatformat:2 }}</td>
+                            <td data-subtotal="{{ item_dict.subtotal }}">${{ item_dict.subtotal | floatformat:2 }}</td>
+                        </tr>
                     {% endfor %}
-                </select>
+                </tbody>
+            </table>
+
+            <p>Total (selected items): <span id="selected-total">${{ checkout_total | floatformat:2 }}</span></p>
+            <p>Total of all products: ${{ total | floatformat:2 }}</p>
+            <p>Your balance: ${{ request.user.balance | floatformat:2 }}</p>
+
+            <div class="mb-3">
+                <label><strong>Address Mode:</strong></label><br>
+                <input type="radio" name="address_mode" value="single" {% if address_mode == 'single' or not address_mode %}checked{% endif %}> Single Address
+                <input type="radio" name="address_mode" value="multiple" {% if address_mode == 'multiple' %}checked{% endif %}> Multiple Address
             </div>
-            <div id="multiple-addresses" class="multiple-addresses" style="display: none;">
-                {% for item in cart_items %}
-                    <h5>Product: {{ item.product.name }} (Seller: {{ item.product.seller.username }})</h5>
-                    <label class="form-label">Please select delivery address ({{ item.product.name }}):</label>
-                    <select name="delivery_address_{{ item.id }}" class="form-select" required>
-                        <option value="">Please select address</option>
+
+            <div id="single-address-field" style="display: {% if address_mode == 'single' or not address_mode %}block{% else %}none{% endif %};">
+                <div class="mb-3">
+                    <label for="delivery_address"><strong>Select delivery address:</strong></label>
+                    <select name="delivery_address" id="delivery_address" class="form-control">
                         {% for address in addresses %}
-                            <option value="{{ address.id }}">{{ address.address_line1 }}, {{ address.city }}, {{ address.country }}</option>
+                            <option value="{{ address.id }}">{{ address.address_line1 }}, {{ address.address_line2 }}, {{ address.city }}, {{ address.state }}, {{ address.postal_code }}, {{ address.country }}</option>
                         {% endfor %}
                     </select>
+                </div>
+            </div>
+
+            <div id="multiple-address-fields" style="display: {% if address_mode == 'multiple' %}block{% else %}none{% endif %};">
+                {% for item_dict in cart_items %}
+                    <div class="mb-3 multiple-address-field" id="delivery_address_{{ item_dict.item.id }}" style="display: {% if item_dict.item.id|stringformat:'s' in selected_items %}block{% else %}none{% endif %};">
+                        <label for="delivery_address_{{ item_dict.item.id }}"><strong>Delivery address for {{ item_dict.item.product.name }}:</strong></label>
+                        <select name="delivery_address_{{ item_dict.item.id }}" id="delivery_address_{{ item_dict.item.id }}" class="form-control">
+                            {% for address in addresses %}
+                                <option value="{{ address.id }}">{{ address.address_line1 }}, {{ address.address_line2 }}, {{ address.city }}, {{ address.state }}, {{ address.postal_code }}, {{ address.country }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 {% endfor %}
             </div>
-<button type="submit" class="btn btn-primary mt-3" {% if user.balance < checkout_total %}disabled{% endif %}>Confirm Payment</button>
+
+            <button type="submit" class="btn btn-primary mt-3">Confirm Payment</button>
         </form>
+
+        <p><a href="{% url 'view_cart' %}" class="btn btn-secondary mt-3">Return to Cart</a></p>
+        <p><a href="{% url 'myaccount' %}" class="btn btn-secondary mt-3">Manage Address</a></p>
     {% else %}
-        <p class="text-muted">The cart is empty.</p>
+        <p class="text-muted">No items to checkout.</p>
+        <p><a href="{% url 'view_cart' %}" class="btn btn-secondary mt-3">Return to Cart</a></p>
     {% endif %}
-    <p><a href="{% url 'view_cart' %}" class="btn btn-secondary mt-3">Return to Cart</a></p>
-    <p><a href="{% url 'myaccount' %}" class="btn btn-secondary mt-3">Management Address</a></p>
 </div>
 
 <script>
-    function toggleAddresses() {
-        const mode = document.querySelector('input[name="address_mode"]:checked').value;
-        const singleAddress = document.getElementById('single-address');
-        const multipleAddresses = document.getElementById('multiple-addresses');
-        if (mode === 'single') {
-            singleAddress.style.display = 'block';
-            multipleAddresses.style.display = 'none';
-        } else {
-            singleAddress.style.display = 'none';
-            multipleAddresses.style.display = 'block';
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('input[name="selected_items"]');
+        const totalDisplay = document.querySelector('#selected-total');
+        const subtotals = Array.from(document.querySelectorAll('td[data-subtotal]')).map(td => parseFloat(td.dataset.subtotal));
+        const addressModeRadios = document.querySelectorAll('input[name="address_mode"]');
+        const singleAddressField = document.getElementById('single-address-field');
+        const multipleAddressFieldsContainer = document.getElementById('multiple-address-fields');
+        const multipleAddressFields = document.querySelectorAll('.multiple-address-field');
+
+        function updateTotal() {
+            let total = 0;
+            checkboxes.forEach((checkbox, index) => {
+                if (checkbox.checked) {
+                    total += subtotals[index];
+                }
+            });
+            totalDisplay.textContent = `$${total.toFixed(2)}`;
         }
-    }
-    window.onload = toggleAddresses;
+
+        function toggleAddressFields() {
+            const isMultiple = document.querySelector('input[name="address_mode"]:checked').value === 'multiple';
+            singleAddressField.style.display = isMultiple ? 'none' : 'block';
+            multipleAddressFieldsContainer.style.display = isMultiple ? 'block' : 'none';
+            if (isMultiple) {
+                multipleAddressFields.forEach(field => {
+                    const itemId = field.id.split('_').pop();
+                    const checkbox = document.querySelector(`input[name="selected_items"][value="${itemId}"]`);
+                    field.style.display = checkbox.checked ? 'block' : 'none';
+                });
+            }
+        }
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateTotal();
+                toggleAddressFields();
+            });
+        });
+
+        addressModeRadios.forEach(radio => {
+            radio.addEventListener('change', toggleAddressFields);
+        });
+
+        // 初始更新
+        updateTotal();
+        toggleAddressFields();
+    });
 </script>
 {% endblock %}
