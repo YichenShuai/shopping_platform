@@ -10,23 +10,19 @@ import io
 from django.core.files.base import ContentFile
 
 def product_list(request):
-    # Searching and filtering
     query = request.GET.get('q')
     category_id = request.GET.get('category')
     products = Product.objects.filter(is_active=True).order_by('name')
 
-    # Searching
     if query:
         products = products.filter(name__icontains=query)
 
-    # Filter by category
     if category_id:
         products = products.filter(category_id=category_id)
 
-    categories = Category.objects.all()  # obtain all the categories
+    categories = Category.objects.all()
 
-    # Pagination
-    paginator = Paginator(products, 12)  # Display 10 products per page
+    paginator = Paginator(products, 12)
     page_number = request.GET.get('page')
     products_page = paginator.get_page(page_number)
 
@@ -71,7 +67,6 @@ def create_product(request):
         )
         product.save()
 
-
         for image in images:
             img = Image.open(image)
             img = img.convert('RGB')
@@ -80,7 +75,6 @@ def create_product(request):
             img.save(output, format='JPEG', quality=85)
             output.seek(0)
             compressed_image = ContentFile(output.read(), name=image.name.rsplit('.', 1)[0] + '.jpg')
-
             product_image = ProductImage(product=product, image=compressed_image)
             product_image.save()
 
@@ -101,11 +95,14 @@ def add_review(request, product_id):
 
     product = get_object_or_404(Product, id=product_id)
 
-    # Check if the buyer has purchased the product before
     has_purchased = OrderItem.objects.filter(
         order__buyer=request.user,
         product=product
     ).exists()
+
+    if not has_purchased:
+        messages.error(request, 'You must purchase this product before adding a review!')
+        return redirect('product_detail', product_id=product_id)
 
     if request.method == 'POST':
         comment = request.POST['comment']
@@ -123,7 +120,6 @@ def add_review(request, product_id):
         )
         review.save()
 
-        # Update product average rating
         product.update_rating()
 
         messages.success(request, 'Comment submitted successfully!')
@@ -141,7 +137,7 @@ def manage_inventory(request):
         messages.error(request, 'Only sellers can manage inventory!')
         return redirect('product_list')
 
-    products = Product.objects.filter(seller=request.user)
+    products = Product.objects.filter(seller=request.user).order_by('name')
     context = {
         'products': products
     }
@@ -156,31 +152,71 @@ def toggle_product(request, product_id):
     product = get_object_or_404(Product, id=product_id, seller=request.user)
     product.is_active = not product.is_active
     product.save()
-    messages.success(request, f'The product has already{"listed" if product.is_active else "removed"}！')
+    messages.success(request, f'The product has already {"listed" if product.is_active else "removed"}!')
     return redirect('manage_inventory')
 
 @login_required
-def update_stock(request, product_id):
+def delete_product(request, product_id):
     if not request.user.is_seller:
-        messages.error(request, 'Only sellers can update stock!')
+        messages.error(request, 'Only sellers can delete products!')
         return redirect('manage_inventory')
 
     product = get_object_or_404(Product, id=product_id, seller=request.user)
     if request.method == 'POST':
-        stock = request.POST.get('stock')
-        try:
-            stock = int(stock)
-            if stock < 0:
-                messages.error(request, 'Stock cannot be negative!')
-            else:
-                product.stock = stock
-                product.save()
-                messages.success(request, 'Stock updated successfully!')
-        except ValueError:
-            messages.error(request, 'Please enter a valid stock quantity!')
+        product.delete()
+        messages.success(request, 'Product deleted successfully!')
+        return redirect('manage_inventory')
+    else:
+        messages.error(request, 'Invalid request method!')
         return redirect('manage_inventory')
 
+@login_required
+def update_product(request, product_id):
+    if not request.user.is_seller:
+        messages.error(request, 'Only sellers can update products!')
+        return redirect('manage_inventory')
+
+    product = get_object_or_404(Product, id=product_id, seller=request.user)
+
+    if request.method == 'POST':
+        name = request.POST['name']
+        description = request.POST['description']
+        price = request.POST['price']
+        stock = request.POST['stock']
+        category_id = request.POST['category']
+        images = request.FILES.getlist('images')
+        is_active = 'is_active' in request.POST
+
+        if not name or not description or not price or not stock or not category_id:
+            messages.error(request, 'All fields are required!')
+            return render(request, 'products/manage_inventory.html', {'product_to_update': product, 'categories': Category.objects.all()})
+
+
+        product.name = name
+        product.description = description
+        product.price = price
+        product.stock = stock
+        product.category_id = category_id
+        product.is_active = is_active
+        product.save()
+
+
+        for image in images:
+            img = Image.open(image)
+            img = img.convert('RGB')
+            img = img.resize((800, 800), Image.LANCZOS)
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=85)
+            output.seek(0)
+            compressed_image = ContentFile(output.read(), name=image.name.rsplit('.', 1)[0] + '.jpg')
+            ProductImage.objects.create(product=product, image=compressed_image)
+
+        messages.success(request, 'Product updated successfully!')
+        return redirect('manage_inventory')
+
+    categories = Category.objects.all()
     context = {
-        'product': product
+        'product_to_update': product,
+        'categories': categories
     }
-    return render(request, 'products/update_stock.html', context)
+    return render(request, 'products/manage_inventory.html', context)

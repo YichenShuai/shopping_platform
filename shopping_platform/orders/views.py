@@ -22,7 +22,6 @@ def checkout(request):
     total_amount = sum(item.product.price * item.quantity for item in cart_items)
     addresses = request.user.addresses.all()
 
-    # 确保用户有地址
     if not addresses:
         messages.error(request, 'Please add at least one address before checkout!')
         return redirect('myaccount')
@@ -34,13 +33,12 @@ def checkout(request):
         } for item in cart_items
     ]
 
-    # 初始化变量
+
     selected_items = request.POST.getlist('selected_items') if request.method == 'POST' else []
     address_mode = request.POST.get('address_mode', 'single') if request.method == 'POST' else 'single'
     checkout_total = 0
 
     if request.method == 'POST':
-        # 调试：打印 selected_items
         print("Selected Items:", selected_items)
 
         selected_cart_items = cart_items.filter(id__in=selected_items)

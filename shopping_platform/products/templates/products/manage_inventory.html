@@ -4,6 +4,7 @@
 
 {% block content %}
 <h1 class="mt-4">Manage Inventory</h1>
+
 {% if messages %}
     {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -13,34 +14,126 @@
     {% endfor %}
 {% endif %}
 
-<div class="container">
-    {% if products %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Product Name</th>
-                    <th>Stock</th>
-                    <th>Price</th>
-                    <th>Operate</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for product in products %}
+{% if not product_to_update %}
+    <div class="list-group">
+        {% for product in products %}
+            <div class="list-group-item">
+                <table class="w-100">
                     <tr>
-                        <td>{{ product.name }}</td>
-                        <td>{{ product.stock }}</td>
-                        <td>${{ product.price | floatformat:2 }}</td>
-                        <td>
-                            <a href="{% url 'update_stock' product.id %}" class="btn btn-warning btn-sm">Update Inventory</a>
+                        <td class="align-middle" style="width: 40%;">{{ product.name }}</td>
+                        <td class="text-end align-middle" style="width: 15%; padding-right: 15px;">Stock: {{ product.stock }}</td>
+                        <td class="text-end align-middle" style="width: 15%; padding-right: 15px;">Price: ${{ product.price | floatformat:2 }}</td>
+                        <td class="text-end align-middle" style="width: 15%; padding-right: 15px;">
+                            {% if product.is_active %}
+                                <span class="badge bg-success">Listed</span>
+                            {% else %}
+                                <span class="badge bg-danger">Delisted</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end align-middle" style="width: 15%;">
+                            <a href="{% url 'update_product' product.id %}" class="btn btn-warning btn-sm">Update Inventory</a>
+                            <form action="{% url 'toggle_product' product.id %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm {% if product.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                                    {% if product.is_active %}Delist{% else %}List{% endif %}
+                                </button>
+                            </form>
+                            <form action="{% url 'delete_product' product.id %}" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
                         </td>
                     </tr>
+                </table>
+                <small>Category: {{ product.category.name|default:"None" }}</small>
+            </div>
+        {% empty %}
+            <p class="text-muted">No products found.</p>
+        {% endfor %}
+    </div>
+    <a href="{% url 'create_product' %}" class="btn btn-primary mt-3">Add new product</a>
+    <p class="mt-3">
+        <a href="{% url 'product_list' %}" class="btn btn-secondary">Return to Home Page</a>
+    </p>
+{% else %}
+    <h2>Update Product: {{ product_to_update.name }}</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="name" class="form-label">Product Name</label>
+            <input type="text" name="name" id="name" class="form-control" value="{{ product_to_update.name }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea name="description" id="description" class="form-control" required>{{ product_to_update.description }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="price" class="form-label">Price</label>
+            <input type="number" step="0.01" name="price" id="price" class="form-control" value="{{ product_to_update.price }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="stock" class="form-label">Stock</label>
+            <input type="number" name="stock" id="stock" class="form-control" value="{{ product_to_update.stock }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="category" class="form-label">Category</label>
+            <select name="category" id="category" class="form-control" required>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if product_to_update.category_id == category.id %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
                 {% endfor %}
-            </tbody>
-        </table>
-        <a href="{% url 'create_product' %}" class="btn btn-primary mt-3">Add new product</a>
-    {% else %}
-        <p class="text-muted">You currently have no product in stock</p>
-        <a href="{% url 'create_product' %}" class="btn btn-primary mt-3">Add new product</a>
-    {% endif %}
-</div>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="is_active" class="form-label">Active</label>
+            <input type="checkbox" name="is_active" id="is_active" {% if product_to_update.is_active %}checked{% endif %}>
+        </div>
+        <div class="mb-3">
+            <label for="images" class="form-label">Product Images (Upload new images, optional)</label>
+            <input type="file" name="images" id="images" class="form-control" accept="image/*" multiple>
+            <div id="image-preview" class="mt-3 d-flex flex-wrap gap-2"></div>
+            <p>Current Images:</p>
+            {% if product_to_update.images.exists %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for image in product_to_update.images.all %}
+                        <img src="{{ image.image.url }}" alt="{{ product_to_update.name }}" style="max-height: 100px; object-fit: cover;" class="img-thumbnail">
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No images available.</p>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Update Product</button>
+        <a href="{% url 'manage_inventory' %}" class="btn btn-secondary ms-2">Cancel</a>
+    </form>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    td {
+        vertical-align: middle !important;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('images').addEventListener('change', function(event) {
+        const preview = document.getElementById('image-preview');
+        preview.innerHTML = '';
+        const files = event.target.files;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.max-height = '100px';
+                img.style.object-fit = 'cover';
+                preview.appendChild(img);
+            }
+        }
+    });
+</script>
 {% endblock %}
