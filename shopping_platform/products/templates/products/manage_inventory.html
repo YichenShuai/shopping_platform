@@ -23,29 +23,49 @@
                         <td class="align-middle" style="width: 40%;">{{ product.name }}</td>
                         <td class="text-end align-middle" style="width: 15%; padding-right: 15px;">Stock: {{ product.stock }}</td>
                         <td class="text-end align-middle" style="width: 15%; padding-right: 15px;">Price: ${{ product.price | floatformat:2 }}</td>
-                        <td class="text-end align-middle" style="width: 15%; padding-right: 15px;">
-                            {% if product.is_active %}
-                                <span class="badge bg-success">Listed</span>
-                            {% else %}
-                                <span class="badge bg-danger">Delisted</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end align-middle" style="width: 15%;">
-                            <a href="{% url 'update_product' product.id %}" class="btn btn-warning btn-sm">Update Inventory</a>
-                            <form action="{% url 'toggle_product' product.id %}" method="post" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm {% if product.is_active %}btn-danger{% else %}btn-success{% endif %}">
-                                    {% if product.is_active %}Delist{% else %}List{% endif %}
-                                </button>
-                            </form>
-                            <form action="{% url 'delete_product' product.id %}" method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>
+                        <td class="text-end align-middle" style="width: 30%;">
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                <!-- 状态徽章 -->
+                                <span class="badge {% if product.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if product.is_active %}Listed{% else %}Delisted{% endif %}
+                                </span>
+                                <!-- Update Inventory 按钮 -->
+                                <a href="{% url 'update_product' product.id %}" class="btn btn-warning btn-sm">Update Inventory</a>
+                                <!-- List/Delist 按钮 -->
+                                <form action="{% url 'toggle_product' product.id %}" method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm {% if product.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                                        {% if product.is_active %}Delist{% else %}List{% endif %}
+                                    </button>
+                                </form>
+                                <!-- Delete 按钮（触发模态框） -->
+                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ product.id }}">Delete</button>
+                            </div>
                         </td>
                     </tr>
                 </table>
                 <small>Category: {{ product.category.name|default:"None" }}</small>
+                <!-- 模态框 -->
+                <div class="modal fade" id="deleteModal-{{ product.id }}" tabindex="-1" aria-labelledby="deleteModalLabel-{{ product.id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteModalLabel-{{ product.id }}">Confirm Delete</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                Are you sure you want to delete "{{ product.name }}"?
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <form action="{% url 'delete_product' product.id %}" method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         {% empty %}
             <p class="text-muted">No products found.</p>
@@ -115,6 +135,9 @@
     td {
         vertical-align: middle !important;
     }
+    .gap-2 {
+        gap: 0.5rem !important;
+    }
 </style>
 {% endblock %}
 
@@ -129,8 +152,8 @@
             if (file) {
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
-                img.style.max-height = '100px';
-                img.style.object-fit = 'cover';
+                img.style.maxHeight = '100px';
+                img.style.objectFit = 'cover';
                 preview.appendChild(img);
             }
         }
