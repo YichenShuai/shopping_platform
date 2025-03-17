@@ -25,7 +25,6 @@
             <button type="submit" class="btn btn-primary w-100">Search</button>
         </div>
     </div>
-    <!-- 添加排序选择（如果实现了动态排序） -->
     {% if sort %}
     <div class="row g-3 mt-2">
         <div class="col-md-4">
@@ -44,7 +43,7 @@
 {% if products %}
     <div class="row">
         {% for product in products %}
-            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="col-lg-4 col-md-4 col-sm-6 mb-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <h5 class="card-title">

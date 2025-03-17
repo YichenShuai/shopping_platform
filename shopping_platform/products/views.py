@@ -1,10 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Product, Review
+from .models import Product, Review, ProductImage
 from categories.models import Category
 from django.core.paginator import Paginator
 from orders.models import Order, OrderItem
+from PIL import Image
+import io
+from django.core.files.base import ContentFile
 
 def product_list(request):
     # Searching and filtering
@@ -23,12 +26,12 @@ def product_list(request):
     categories = Category.objects.all()  # obtain all the categories
 
     # Pagination
-    paginator = Paginator(products, 10)  # Display 10 products per page
+    paginator = Paginator(products, 12)  # Display 10 products per page
     page_number = request.GET.get('page')
     products_page = paginator.get_page(page_number)
 
     context = {
-        'products': products_page,  # 使用分页后的对象
+        'products': products_page,
         'categories': categories,
         'query': query or '',
         'selected_category': category_id or ''
@@ -46,9 +49,8 @@ def product_detail(request, product_id):
 
 @login_required
 def create_product(request):
-    # only buyer can publish products
     if not request.user.is_seller:
-        messages.error(request, 'Only seller can publish products！')
+        messages.error(request, 'Only sellers can publish products!')
         return redirect('product_list')
 
     if request.method == 'POST':
@@ -57,8 +59,8 @@ def create_product(request):
         price = request.POST['price']
         stock = request.POST['stock']
         category_id = request.POST['category']
+        images = request.FILES.getlist('images')
 
-        # create new product
         product = Product(
             name=name,
             description=description,
@@ -68,7 +70,21 @@ def create_product(request):
             category_id=category_id
         )
         product.save()
-        messages.success(request, 'new product added！')
+
+
+        for image in images:
+            img = Image.open(image)
+            img = img.convert('RGB')
+            img = img.resize((800, 800), Image.LANCZOS)
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=85)
+            output.seek(0)
+            compressed_image = ContentFile(output.read(), name=image.name.rsplit('.', 1)[0] + '.jpg')
+
+            product_image = ProductImage(product=product, image=compressed_image)
+            product_image.save()
+
+        messages.success(request, 'New product added!')
         return redirect('manage_inventory')
 
     categories = Category.objects.all()
@@ -108,11 +124,7 @@ def add_review(request, product_id):
         review.save()
 
         # Update product average rating
-        reviews = product.reviews.all()
-        if reviews:
-            avg_rating = sum(review.rating for review in reviews) / reviews.count()
-            product.rating = round(avg_rating, 2)
-            product.save()
+        product.update_rating()
 
         messages.success(request, 'Comment submitted successfully!')
         return redirect('product_detail', product_id=product_id)
