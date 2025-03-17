@@ -25,27 +25,26 @@
                         <td class="text-end align-middle" style="width: 15%; padding-right: 15px;">Price: ${{ product.price | floatformat:2 }}</td>
                         <td class="text-end align-middle" style="width: 30%;">
                             <div class="d-flex justify-content-end align-items-center gap-2">
-                                <!-- 状态徽章 -->
                                 <span class="badge {% if product.is_active %}bg-success{% else %}bg-danger{% endif %}">
                                     {% if product.is_active %}Listed{% else %}Delisted{% endif %}
                                 </span>
-                                <!-- Update Inventory 按钮 -->
+                                <!-- Update Inventory Button -->
                                 <a href="{% url 'update_product' product.id %}" class="btn btn-warning btn-sm">Update Inventory</a>
-                                <!-- List/Delist 按钮 -->
+                                <!-- List/Delist Button -->
                                 <form action="{% url 'toggle_product' product.id %}" method="post" style="display: inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm {% if product.is_active %}btn-danger{% else %}btn-success{% endif %}">
                                         {% if product.is_active %}Delist{% else %}List{% endif %}
                                     </button>
                                 </form>
-                                <!-- Delete 按钮（触发模态框） -->
+                                <!-- Delete Button-->
                                 <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ product.id }}">Delete</button>
                             </div>
                         </td>
                     </tr>
                 </table>
                 <small>Category: {{ product.category.name|default:"None" }}</small>
-                <!-- 模态框 -->
+
                 <div class="modal fade" id="deleteModal-{{ product.id }}" tabindex="-1" aria-labelledby="deleteModalLabel-{{ product.id }}" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">

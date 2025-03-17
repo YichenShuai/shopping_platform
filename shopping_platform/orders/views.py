@@ -33,7 +33,6 @@ def checkout(request):
         } for item in cart_items
     ]
 
-
     selected_items = request.POST.getlist('selected_items') if request.method == 'POST' else []
     address_mode = request.POST.get('address_mode', 'single') if request.method == 'POST' else 'single'
     checkout_total = 0
@@ -122,7 +121,7 @@ def checkout(request):
                     messages.error(request, f'Insufficient stock for {item.product.name}! Only {item.product.stock} left.')
                     return redirect('view_cart')
 
-            # Create order
+            # Create orders and update seller balance
             orders = []
             for item in selected_cart_items:
                 item_total = item.product.price * item.quantity
@@ -133,7 +132,7 @@ def checkout(request):
                     total_amount=item_total,
                     delivery_address=delivery_address,
                     status='Pending',
-                    payment_status='Pending Payment'
+                    payment_status='Paid'
                 )
                 order.save()
 
@@ -147,16 +146,16 @@ def checkout(request):
                 item.product.sales += item.quantity
                 item.product.save()
 
+                # Update seller balance
+                seller = item.product.seller
+                seller.balance += item_total
+                seller.save()
+
                 orders.append(order)
 
-            # Deduct the balance
+            # Deduct the buyer's balance
             request.user.balance -= checkout_total
             request.user.save()
-
-            # Update order status
-            for order in orders:
-                order.payment_status = 'Paid'
-                order.save()
 
             # Delete purchased cart items
             selected_cart_items.delete()
@@ -194,11 +193,10 @@ def seller_orders(request):
         messages.error(request, 'Only sellers can view sale orders history!!')
         return redirect('product_list')
 
-    products = Product.objects.filter(seller=request.user)
-    order_items = OrderItem.objects.filter(product__in=products).select_related('order')
-    orders = Order.objects.filter(items__in=order_items).distinct().order_by('-created_at')
+    orders = Order.objects.filter(items__product__seller=request.user).distinct().order_by('-created_at')
     context = {
-        'orders': orders
+        'orders': orders,
+        'balance': request.user.balance
     }
     return render(request, 'orders/seller_orders.html', context)
 
@@ -256,6 +254,11 @@ def process_return(request, order_id):
         buyer = order.buyer
         buyer.balance += order.total_amount
         buyer.save()
+
+        # Deduct the seller's balance
+        seller = request.user
+        seller.balance -= order.total_amount
+        seller.save()
 
         # Restore Inventory
         for item in order_items:
