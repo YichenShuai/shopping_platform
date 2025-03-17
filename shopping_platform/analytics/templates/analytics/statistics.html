@@ -1,31 +1,137 @@
 {% extends 'base.html' %}
 
+{% block title %}Sales Statistics{% endblock %}
+
 {% block content %}
-    <h1>Sales Statistics</h1>
-    {% if messages %}
-        {% for message in messages %}
-            <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+<h1 class="mt-4">Sales Statistics</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label for="time_range" class="form-label">Select Time Range:</label>
+        <select id="time_range" class="form-select" onchange="updateChart()">
+            <option value="all" {% if time_range == 'all' %}selected{% endif %}>All Time</option>
+            <option value="day" {% if time_range == 'day' %}selected{% endif %}>Today</option>
+            <option value="week" {% if time_range == 'week' %}selected{% endif %}>This Week</option>
+            <option value="month" {% if time_range == 'month' %}selected{% endif %}>This Month</option>
+            <option value="year" {% if time_range == 'year' %}selected{% endif %}>This Year</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label for="chart_type" class="form-label">Select Chart Type:</label>
+        <select id="chart_type" class="form-select" onchange="updateChart()">
+            <option value="line" {% if chart_type == 'line' %}selected{% endif %}>Line Chart</option>
+            <option value="bar" {% if chart_type == 'bar' %}selected{% endif %}>Bar Chart</option>
+        </select>
+    </div>
+</div>
+
+<!-- Export Buttons -->
+<div class="mb-3">
+    <button id="exportPdfBtn" class="btn btn-primary me-2">Export to PDF</button>
+    <a href="?export=csv&time_range={{ time_range }}&chart_type={{ chart_type }}" class="btn btn-secondary">Export to CSV</a>
+</div>
+
+<!-- Statistics Overview -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Total Sales</h5>
+                <p class="card-text">${{ total_sales | floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Total Orders</h5>
+                <p class="card-text">{{ order_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales Trend Chart -->
+<h2 class="mt-4">Sales Trend</h2>
+<div>
+    <canvas id="salesChart" width="400" height="200"></canvas>
+</div>
+
+<!-- Top Products -->
+<h2 class="mt-4">Popular Products (Top 5)</h2>
+{% if top_products %}
+    <ul class="list-group">
+        {% for product in top_products %}
+            <li class="list-group-item">{{ product.name }} - Sales Quantity: {{ product.total_sold|default:"0" }}</li>
         {% endfor %}
-    {% endif %}
-    <div>
-        <h2>Total Sales</h2>
-        <p>${{ total_sales | floatformat:2 }}</p>
-    </div>
-    <div>
-        <h2>Total Orders</h2>
-        <p>{{ order_count }}</p>
-    </div>
-    <div>
-        <h2>Popular Products (Top 5)</h2>
-        {% if top_products %}
-            <ul>
-                {% for product in top_products %}
-                    <li>{{ product.name }} - Sales quantity: {{ product.total_sold|default:"0" }}</li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No data yet.</p>
-        {% endif %}
-    </div>
-    <p><a href="{% url 'product_list' %}">Return to product list</a></p>
+    </ul>
+{% else %}
+    <p class="text-muted">No data yet.</p>
+{% endif %}
+
+<p class="mt-3"><a href="{% url 'product_list' %}" class="btn btn-secondary">Return to Product List</a></p>
+
+<!-- Chart.js and html2canvas -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script>
+    var ctx = document.getElementById('salesChart').getContext('2d');
+    var salesChart = null;
+
+    function drawChart() {
+        var chartType = document.getElementById('chart_type').value;
+        if (salesChart) {
+            salesChart.destroy();
+        }
+        salesChart = new Chart(ctx, {
+            type: chartType,
+            data: {
+                labels: {{ labels|safe }},
+                datasets: [{
+                    label: 'Sales Amount ($)',
+                    data: {{ data|safe }},
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: chartType === 'line',
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChart() {
+        var timeRange = document.getElementById('time_range').value;
+        var chartType = document.getElementById('chart_type').value;
+        location.href = `?time_range=${timeRange}&chart_type=${chartType}`;
+    }
+
+    drawChart();
+
+    // Export to PDF with Chart Image
+    document.getElementById('exportPdfBtn').addEventListener('click', function() {
+        html2canvas(document.querySelector('#salesChart')).then(canvas => {
+            var chartImage = canvas.toDataURL('image/png');
+            var timeRange = document.getElementById('time_range').value;
+            var chartType = document.getElementById('chart_type').value;
+            var url = `?export=pdf&time_range=${timeRange}&chart_type=${chartType}&chart_image=${encodeURIComponent(chartImage)}`;
+            window.location.href = url;
+        });
+    });
+</script>
 {% endblock %}
