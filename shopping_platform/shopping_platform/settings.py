@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'categories.apps.CategoriesConfig',
     'inventory.apps.InventoryConfig',
     'analytics.apps.AnalyticsConfig',
+    'about.apps.AboutConfig',
 ]
 
 MIDDLEWARE = [
@@ -132,3 +133,11 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'yichen.uk02@gmail.com'
+EMAIL_HOST_PASSWORD = 'your-app-password'  # 替换为你的应用密码
+DEFAULT_FROM_EMAIL = 'yichen.uk02@gmail.com'
+CONTACT_EMAIL = 'yichen.uk02@gmail.com'
