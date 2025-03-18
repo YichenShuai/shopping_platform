@@ -1,12 +1,16 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
 from .models import Order, OrderItem
 from cart.models import Cart
 from products.models import Product
 from users.models import User, Address
 from django.utils import timezone
 from django.db import transaction
+import stripe
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 @login_required
 def checkout(request):
@@ -41,7 +45,6 @@ def checkout(request):
         print("Selected Items:", selected_items)
 
         selected_cart_items = cart_items.filter(id__in=selected_items)
-
         if not selected_cart_items:
             messages.error(request, 'Please select at least one item to checkout!')
             return render(request, 'orders/checkout.html', {
@@ -51,6 +54,7 @@ def checkout(request):
                 'addresses': addresses,
                 'selected_items': selected_items,
                 'address_mode': address_mode,
+                'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
             })
 
         selected_cart_items_with_subtotal = [
@@ -61,7 +65,8 @@ def checkout(request):
         ]
         checkout_total = sum(item['subtotal'] for item in selected_cart_items_with_subtotal)
 
-        if request.user.balance < checkout_total:
+        payment_method = request.POST.get('payment_method', 'balance')
+        if payment_method == 'balance' and request.user.balance < checkout_total:
             messages.error(request, 'Insufficient balance, please recharge!')
             return render(request, 'orders/checkout.html', {
                 'cart_items': cart_items_with_subtotal,
@@ -70,6 +75,7 @@ def checkout(request):
                 'addresses': addresses,
                 'selected_items': selected_items,
                 'address_mode': address_mode,
+                'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
             })
 
         if address_mode not in ['single', 'multiple']:
@@ -81,6 +87,7 @@ def checkout(request):
                 'addresses': addresses,
                 'selected_items': selected_items,
                 'address_mode': address_mode,
+                'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
             })
 
         if address_mode == 'single':
@@ -94,6 +101,7 @@ def checkout(request):
                     'addresses': addresses,
                     'selected_items': selected_items,
                     'address_mode': address_mode,
+                    'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
                 })
             address = get_object_or_404(Address, id=address_id, user=request.user)
             delivery_address = f"{address.address_line1}, {address.address_line2}, {address.city}, {address.state}, {address.postal_code}, {address.country}"
@@ -110,6 +118,7 @@ def checkout(request):
                         'addresses': addresses,
                         'selected_items': selected_items,
                         'address_mode': address_mode,
+                        'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
                     })
                 address = get_object_or_404(Address, id=address_id, user=request.user)
                 delivery_addresses[item] = f"{address.address_line1}, {address.address_line2}, {address.city}, {address.state}, {address.postal_code}, {address.country}"
@@ -121,7 +130,7 @@ def checkout(request):
                     messages.error(request, f'Insufficient stock for {item.product.name}! Only {item.product.stock} left.')
                     return redirect('view_cart')
 
-            # Create orders and update seller balance
+            # Create orders
             orders = []
             for item in selected_cart_items:
                 item_total = item.product.price * item.quantity
@@ -132,7 +141,7 @@ def checkout(request):
                     total_amount=item_total,
                     delivery_address=delivery_address,
                     status='Pending',
-                    payment_status='Paid'
+                    payment_status='Pending Payment'
                 )
                 order.save()
 
@@ -146,16 +155,44 @@ def checkout(request):
                 item.product.sales += item.quantity
                 item.product.save()
 
-                # Update seller balance
-                seller = item.product.seller
-                seller.balance += item_total
-                seller.save()
-
                 orders.append(order)
 
-            # Deduct the buyer's balance
-            request.user.balance -= checkout_total
-            request.user.save()
+            if payment_method == 'balance':
+                request.user.balance -= checkout_total
+                request.user.save()
+                for order in orders:
+                    order.payment_status = 'Paid'
+                    order.save()
+                    seller = order.items.first().product.seller
+                    seller.balance += order.total_amount
+                    seller.save()
+            elif payment_method == 'card':
+                payment_method_id = request.POST.get('stripe_payment_method')
+                try:
+                    payment_intent = stripe.PaymentIntent.create(
+                        amount=int(checkout_total * 100),
+                        currency='usd',
+                        payment_method=payment_method_id,
+                        confirm=True,
+                        automatic_payment_methods={
+                            'enabled': True,
+                            'allow_redirects': 'never'
+                        }
+                    )
+                    if payment_intent.status == 'succeeded':
+                        for order in orders:
+                            order.payment_status = 'Paid'
+                            order.save()
+                            seller = order.items.first().product.seller
+                            seller.balance += order.total_amount
+                            seller.save()
+                    else:
+                        raise stripe.error.StripeError("Payment failed.")
+                except stripe.error.StripeError as e:
+                    for order in orders:
+                        order.delete()
+                    messages.error(request, f'Payment error: {str(e)}')
+                    return redirect('view_cart')
 
             # Delete purchased cart items
             selected_cart_items.delete()
@@ -170,9 +207,9 @@ def checkout(request):
         'addresses': addresses,
         'selected_items': selected_items,
         'address_mode': address_mode,
+        'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
     }
     return render(request, 'orders/checkout.html', context)
-
 
 
 @login_required

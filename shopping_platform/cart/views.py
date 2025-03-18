@@ -51,7 +51,7 @@ def update_cart(request, cart_id):
             try:
                 new_quantity = int(new_quantity)
                 if new_quantity > 0:
-                    if new_quantity <= cart_item.product.stock:  # 检查库存
+                    if new_quantity <= cart_item.product.stock:
                         cart_item.quantity = new_quantity
                         cart_item.save()
                         messages.success(request, f'Cart updated for {cart_item.product.name}!')
