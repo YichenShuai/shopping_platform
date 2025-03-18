@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Top Up Balance{% endblock %}
+
+{% block content %}
+<h1 class="mt-4">Top Up Balance</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="container">
+    <p>Your current balance: ${{ balance|floatformat:2 }}</p>
+    <form method="post" id="top-up-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div id="card-element">
+        </div>
+        <div id="card-errors" role="alert" style="color: red;"></div>
+        <script src="https://js.stripe.com/v3/"></script>
+        <script>
+            var stripe = Stripe('{{ settings.STRIPE_PUBLISHABLE_KEY }}');
+            if (!stripe) {
+                document.getElementById('card-errors').textContent = 'Stripe initialization failed. Check Publishable Key.';
+                throw new Error('Stripe initialization failed.');
+            }
+
+            var elements = stripe.elements();
+            var cardElement = elements.create('card');
+            cardElement.mount('#card-element');
+
+            var form = document.getElementById('top-up-form');
+            var cardErrors = document.getElementById('card-errors');
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                console.log('Form submission intercepted');
+                stripe.createToken(cardElement).then(function(result) {
+                    console.log('Stripe createToken result:', result);
+                    if (result.error) {
+                        cardErrors.textContent = result.error.message;
+                    } else {
+                        var token = result.token.id;
+                        console.log('Generated token:', token);
+                        var hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'stripeToken';
+                        hiddenInput.value = token;
+                        form.appendChild(hiddenInput);
+                        console.log('Submitting form with token:', token);
+                        form.submit();
+                    }
+                }).catch(function(error) {
+                    cardErrors.textContent = 'An error occurred: ' + error.message;
+                    console.error('Stripe error:', error);
+                });
+            });
+        </script>
+        <button type="submit" class="btn btn-primary mt-3">Top Up</button>
+    </form>
+    <p><a href="{% url 'myaccount' %}" class="btn btn-secondary mt-3">Back to My Account</a></p>
+</div>
+{% endblock %}

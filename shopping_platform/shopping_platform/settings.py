@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'inventory.apps.InventoryConfig',
     'analytics.apps.AnalyticsConfig',
     'about.apps.AboutConfig',
+    'payment.apps.PaymentConfig',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +72,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                'django.template.context_processors.request',
+                'shopping_platform.context_processors.stripe_keys',
             ],
         },
     },
@@ -141,3 +144,6 @@ EMAIL_HOST_USER = 'yichen.uk02@gmail.com'
 EMAIL_HOST_PASSWORD = 'ywbhpzxygzkhrmqt'  # App password of Gmail
 DEFAULT_FROM_EMAIL = 'yichen.uk02@gmail.com'
 CONTACT_EMAIL = 'yichen.uk02@gmail.com'
+
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51R3xqpE0yGjq5HO99D4JGPBvkXaYBMpC7VJ4CGAn9Ub85jpK6AqprBWhwLBMG0fl65p3A5CghWIcXm4SszFELbBo00uZB0DCF4'  # Stripe publishable-key
+STRIPE_SECRET_KEY = 'sk_test_51R3xqpE0yGjq5HO93FSFNI54KyMujNJ9GpbsV8JQSmpxSfEvALFe4JNUPayqEjqLYIt5vGlGhRXlWUH46ACVG4zD00zmzJbT7B'  # Stripe secret-key
