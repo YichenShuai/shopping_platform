@@ -23,8 +23,17 @@ def statistics(request):
         return redirect('product_list')
 
     # Get time frame and chart type parameters
-    time_range = request.GET.get('time_range', 'all')
-    chart_type = request.GET.get('chart_type', 'line')
+    if request.method == 'POST':
+        time_range = request.POST.get('time_range', 'all')
+        chart_type = request.POST.get('chart_type', 'line')
+        export_type = request.POST.get('export')
+        chart_image_data = request.POST.get('chart_image', '')
+    else:
+        time_range = request.GET.get('time_range', 'all')
+        chart_type = request.GET.get('chart_type', 'line')
+        export_type = request.GET.get('export')
+        chart_image_data = request.GET.get('chart_image', '')
+
     today = datetime.date.today()
 
     # Filter orders by time range
@@ -59,7 +68,6 @@ def statistics(request):
         sales_trend = orders.annotate(date=TruncDate('created_at')).values('date').annotate(total=Sum('total_amount')).order_by('date')
 
     # Prepare chart data
-    # Dynamically select key names
     key_map = {
         'day': 'date',
         'week': 'week',
@@ -85,13 +93,13 @@ def statistics(request):
     }
 
     # Processing export requests
-    if request.GET.get('export') == 'pdf':
-        chart_image_data = request.GET.get('chart_image', '')
+    if export_type == 'pdf':
         return generate_pdf_report(total_sales, order_count, top_products, labels, data, time_range, chart_image_data)
-    elif request.GET.get('export') == 'csv':
+    elif export_type == 'csv':
         return generate_csv_report(total_sales, order_count, top_products, sales_trend)
 
     return render(request, 'analytics/statistics.html', context)
+
 
 def generate_pdf_report(total_sales, order_count, top_products, labels, data, time_range, chart_image_data):
     buffer = BytesIO()
@@ -157,7 +165,7 @@ def generate_pdf_report(total_sales, order_count, top_products, labels, data, ti
     # Adding a Chart Image
     if chart_image_data:
         try:
-            chart_image_data = chart_image_data.split(',')[1]  # 移除 "data:image/png;base64," 前缀
+            chart_image_data = chart_image_data.split(',')[1]
             image_data = base64.b64decode(chart_image_data)
             image_buffer = BytesIO(image_data)
             elements.append(Paragraph("Sales Trend Chart", styles['Heading2']))

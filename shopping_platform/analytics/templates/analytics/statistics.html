@@ -32,6 +32,15 @@
     <a href="?export=csv&time_range={{ time_range }}&chart_type={{ chart_type }}" class="btn btn-secondary">Export to CSV</a>
 </div>
 
+<form id="exportPdfForm" method="POST" action="{% url 'statistics' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="export" value="pdf">
+    <input type="hidden" name="time_range" id="form_time_range">
+    <input type="hidden" name="chart_type" id="form_chart_type">
+    <input type="hidden" name="chart_image" id="form_chart_image">
+</form>
+<!-- 修改部分 1 结束 -->
+
 <!-- Statistics Overview -->
 <div class="row">
     <div class="col-md-4">
@@ -113,15 +122,16 @@
     }
 
     drawChart();
-
-    // Export to PDF with Chart Image
     document.getElementById('exportPdfBtn').addEventListener('click', function() {
         html2canvas(document.querySelector('#salesChart')).then(canvas => {
             var chartImage = canvas.toDataURL('image/png');
             var timeRange = document.getElementById('time_range').value;
             var chartType = document.getElementById('chart_type').value;
-            var url = `?export=pdf&time_range=${timeRange}&chart_type=${chartType}&chart_image=${encodeURIComponent(chartImage)}`;
-            window.location.href = url;
+
+            document.getElementById('form_time_range').value = timeRange;
+            document.getElementById('form_chart_type').value = chartType;
+            document.getElementById('form_chart_image').value = chartImage;
+            document.getElementById('exportPdfForm').submit();
         });
     });
 </script>
