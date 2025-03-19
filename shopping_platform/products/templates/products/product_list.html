@@ -6,13 +6,13 @@
 <h1 class="mt-4">Shopping</h1>
 
 <!-- Search and Filter Form -->
-<form method="get" class="mb-4">
+<form method="get" class="mb-4" id="search-form">
     <div class="row g-3 align-items-center">
         <div class="col-md-6">
-            <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search products...">
+            <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search products..." id="search-query">
         </div>
         <div class="col-md-4">
-            <select name="category" class="form-control">
+            <select name="category" class="form-control" id="category-filter">
                 <option value="">All Categories</option>
                 {% for category in categories %}
                     <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
@@ -40,40 +40,42 @@
 </form>
 
 <!-- Product List -->
-{% if products %}
-    <div class="row">
-        {% for product in products %}
-            <div class="col-lg-4 col-md-4 col-sm-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <a href="{% url 'product_detail' product.id %}" class="text-decoration-none">{{ product.name }}</a>
-                        </h5>
-                        <p class="card-text">Price: ${{ product.price | floatformat:2 }}</p>
-                        <p class="card-text">
-                            {% if product.stock > 0 %}
-                                Stock: {{ product.stock }}
-                            {% else %}
-                                <span class="text-danger">Out of Stock</span>
-                            {% endif %}
-                        </p>
-                        <p class="card-text">Seller: {{ product.seller.username }}</p>
-                        <div class="d-flex gap-2">
-                            <a href="{% url 'product_detail' product.id %}" class="btn btn-primary btn-sm">Details</a>
-                            {% if user.is_authenticated %}
-                                <a href="{% url 'add_to_cart' product.id %}" class="btn btn-success btn-sm">Add to Cart</a>
-                            {% else %}
-                                <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}" class="btn btn-warning btn-sm">Add to Cart (Login)</a>
-                            {% endif %}
+<div id="product-list">
+    {% if products %}
+        <div class="row">
+            {% for product in products %}
+                <div class="col-lg-4 col-md-4 col-sm-6 mb-4 product-item" data-name="{{ product.name|lower }}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="{% url 'product_detail' product.id %}" class="text-decoration-none">{{ product.name }}</a>
+                            </h5>
+                            <p class="card-text">Price: ${{ product.price | floatformat:2 }}</p>
+                            <p class="card-text">
+                                {% if product.stock > 0 %}
+                                    Stock: {{ product.stock }}
+                                {% else %}
+                                    <span class="text-danger">Out of Stock</span>
+                                {% endif %}
+                            </p>
+                            <p class="card-text">Seller: {{ product.seller.username }}</p>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'product_detail' product.id %}" class="btn btn-primary btn-sm">Details</a>
+                                {% if user.is_authenticated %}
+                                    <a href="{% url 'add_to_cart' product.id %}" class="btn btn-success btn-sm">Add to Cart</a>
+                                {% else %}
+                                    <a href="{% url 'login' %}?next={% url 'add_to_cart' product.id %}" class="btn btn-warning btn-sm">Add to Cart (Login)</a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        {% endfor %}
-    </div>
-{% else %}
-    <p class="text-muted">No products found.</p>
-{% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">No products found.</p>
+    {% endif %}
+</div>
 
 <!-- Pagination -->
 {% if products.has_other_pages %}
@@ -114,4 +116,33 @@
     </nav>
 {% endif %}
 
+<!-- Query and AJAX -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#search-query').on('input', function() {
+            var query = $(this).val().toLowerCase();
+
+            $.ajax({
+                url: window.location.href,
+                method: 'GET',
+                success: function() {
+                    $('.product-item').each(function() {
+                        var productName = $(this).data('name');
+                        if (productName.includes(query)) {
+                            $(this).show();
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+                },
+                error: function() {
+                    console.log('Filtering failed');
+                }
+            });
+        });
+        $('#search-form').on('submit', function(e) {
+        });
+    });
+</script>
 {% endblock %}
