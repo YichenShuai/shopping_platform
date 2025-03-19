@@ -3,11 +3,113 @@
 {% block title %}About Us{% endblock %}
 
 {% block content %}
-<h1 class="mt-4">About Us</h1>
+<div class="about-page">
+    <!-- Header Section -->
+    <section class="hero-section bg-light py-5">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold mb-3">About Us</h1>
+            <p class="lead text-muted">Providing a convenient online shopping experience</p>
+        </div>
+    </section>
 
-<div class="container">
-    <p>Welcome to our online shpping platform! We are dedicated to providing a seamless shopping experience for buyers and sellers alike. Our mission is to connect people through quality products and excellent service.</p>
-    <p>Founded in 2025, our platform has grown to serve thousands of users worldwide. We pride ourselves on our commitment to customer satisfaction and innovative features.</p>
-    <p>Our team is passionate about technology and e-commerce, working tirelessly to improve our platform and meet your needs.</p>
+    <!-- Main Content -->
+    <section class="content-section py-5">
+        <div class="container">
+            <div class="row">
+                <!-- About the Platform -->
+                <div class="col-lg-6 mb-4">
+                    <h2 class="fw-bold mb-3">Our Platform</h2>
+                    <p class="text-muted">
+                        We are an online shopping platform established in 2025, committed to serving both buyers and sellers.
+                        Since our launch, we have supported many users with their shopping and trading needs.
+                    </p>
+                    <p class="text-muted">
+                        Our goal is to offer a straightforward and dependable shopping experience for everyone.
+                    </p>
+                </div>
+
+                <!-- Our Goal -->
+                <div class="col-lg-6 mb-4">
+                    <h2 class="fw-bold mb-3">Our Goal</h2>
+                    <p class="text-muted">
+                        We aim to create a practical and trustworthy platform that provides good service to our users.
+                        We are focused on making steady improvements to meet the needs of buyers and sellers.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Core Features -->
+            <div class="row mt-5">
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-check-circle-fill text-primary fs-2 mb-3"></i>
+                            <h5 class="card-title fw-bold">Focus on Quality</h5>
+                            <p class="card-text text-muted">
+                                We pay attention to product quality to ensure confidence in every purchase.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-person-fill text-primary fs-2 mb-3"></i>
+                            <h5 class="card-title fw-bold">User-Centered</h5>
+                            <p class="card-text text-muted">
+                                We value the shopping and trading experience of our users.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-gear-fill text-primary fs-2 mb-3"></i>
+                            <h5 class="card-title fw-bold">Continuous Improvement</h5>
+                            <p class="card-text text-muted">
+                                We work to enhance our platform and service quality over time.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section class="team-section bg-light py-5">
+        <div class="container">
+            <h2 class="text-center fw-bold mb-5">Our Team</h2>
+            <div class="row justify-content-center">
+                <div class="col-md-6 text-center">
+                    <p class="text-muted">
+                        Our team consists of dedicated individuals working on platform development and user support.
+                        We strive to improve your experience through consistent effort.
+                    </p>
+                    <a href="/about/contact-us" class="btn btn-primary mt-3">Contact Us</a>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
+
+<!-- Custom Styles -->
+<style>
+    .about-page {
+        font-family: 'Arial', sans-serif;
+    }
+    .hero-section {
+        background: #f8f9fa;
+    }
+    .card {
+        transition: transform 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    .bi {
+        color: #007bff;
+    }
+</style>
 {% endblock %}
