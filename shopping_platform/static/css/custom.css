@@ -1,0 +1,51 @@
+/* custom.css */
+/* From About Us */
+.about-page {
+    font-family: 'Arial', sans-serif;
+}
+.hero-section {
+    background: #f8f9fa;
+}
+.card {
+    transition: transform 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+.bi {
+    color: #007bff;
+}
+
+/* From My Account */
+.address-card {
+    border: 1px solid #dee2e6;
+    transition: box-shadow 0.3s ease;
+}
+.address-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.card-header {
+    border-bottom: none;
+}
+.card-body p {
+    margin-bottom: 0.5rem;
+}
+.needs-validation {
+    margin-bottom: 1rem;
+}
+@media (max-width: 768px) {
+    .col-md-8 {
+        padding: 0 15px;
+    }
+    .row-cols-md-2 {
+        flex-direction: column;
+    }
+}
+
+/* From Manage Inventory */
+td {
+    vertical-align: middle !important;
+}
+.gap-2 {
+    gap: 0.5rem !important;
+}

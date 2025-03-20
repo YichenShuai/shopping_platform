@@ -141,31 +141,3 @@
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<style>
-    .address-card {
-        border: 1px solid #dee2e6;
-        transition: box-shadow 0.3s ease;
-    }
-    .address-card:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .card-header {
-        border-bottom: none;
-    }
-    .card-body p {
-        margin-bottom: 0.5rem;
-    }
-    .needs-validation {
-        margin-bottom: 1rem;
-    }
-    @media (max-width: 768px) {
-        .col-md-8 {
-            padding: 0 15px;
-        }
-        .row-cols-md-2 {
-            flex-direction: column;
-        }
-    }
-</style>
-{% endblock %}

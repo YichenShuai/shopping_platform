@@ -119,34 +119,3 @@
     </form>
 {% endif %}
 {% endblock %}
-
-{% block extra_css %}
-<style>
-    td {
-        vertical-align: middle !important;
-    }
-    .gap-2 {
-        gap: 0.5rem !important;
-    }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.getElementById('images').addEventListener('change', function(event) {
-        const preview = document.getElementById('image-preview');
-        preview.innerHTML = '';
-        const files = event.target.files;
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            if (file) {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                img.style.maxHeight = '100px';
-                img.style.objectFit = 'cover';
-                preview.appendChild(img);
-            }
-        }
-    });
-</script>
-{% endblock %}

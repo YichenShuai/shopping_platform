@@ -116,33 +116,4 @@
     </nav>
 {% endif %}
 
-<!-- Query and AJAX -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#search-query').on('input', function() {
-            var query = $(this).val().toLowerCase();
-
-            $.ajax({
-                url: window.location.href,
-                method: 'GET',
-                success: function() {
-                    $('.product-item').each(function() {
-                        var productName = $(this).data('name');
-                        if (productName.includes(query)) {
-                            $(this).show();
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-                },
-                error: function() {
-                    console.log('Filtering failed');
-                }
-            });
-        });
-        $('#search-form').on('submit', function(e) {
-        });
-    });
-</script>
 {% endblock %}
